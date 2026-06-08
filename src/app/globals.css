@@ -1,0 +1,113 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  Bookly design tokens.
+  Brand palette (from Master Spec v5):
+    Primary  #E05A29  -> 16 75% 52%
+    Backgrnd #F2ECEC  -> 0 21% 94%
+    Ink/Dark #132436  -> 211 48% 14%
+    Accent   #9C90FC  -> 247 95% 77%
+*/
+
+@layer base {
+  :root {
+    --background: 0 21% 94%;
+    --foreground: 211 48% 14%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 211 48% 14%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 211 48% 14%;
+
+    --primary: 16 75% 52%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 211 48% 14%;
+    --secondary-foreground: 0 0% 100%;
+
+    --accent: 247 95% 77%;
+    --accent-foreground: 211 48% 14%;
+
+    --muted: 0 16% 90%;
+    --muted-foreground: 211 16% 40%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 152 56% 38%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 211 48% 14%;
+
+    --border: 211 14% 86%;
+    --input: 211 14% 84%;
+    --ring: 16 75% 52%;
+
+    --radius: 0.875rem;
+
+    /* Chart palette */
+    --chart-1: 16 75% 52%;
+    --chart-2: 247 95% 77%;
+    --chart-3: 211 48% 24%;
+    --chart-4: 152 56% 42%;
+    --chart-5: 38 92% 55%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "cv11", "ss01";
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Hide number input spinners for a cleaner look */
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Skeleton shimmer */
+  .skeleton {
+    @apply relative overflow-hidden bg-muted/70;
+  }
+  .skeleton::after {
+    @apply absolute inset-0 -translate-x-full animate-shimmer;
+    content: "";
+    background-image: linear-gradient(
+      90deg,
+      transparent,
+      hsl(0 0% 100% / 0.55),
+      transparent
+    );
+  }
+
+  .safe-bottom {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 1rem);
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+}
