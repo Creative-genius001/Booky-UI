@@ -47,6 +47,7 @@ export function PaymentCallbackView() {
   }, []);
 
   const { data: booking, isLoading } = useBookingByCode(pending?.code, true);
+  console.log("data is:", booking)
 
   const settled =
     booking?.payment_status === "success" ||

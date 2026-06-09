@@ -1,4 +1,3 @@
-/** Runtime configuration sourced from public env vars. */
 export const config = {
   apiBaseUrl: (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080").replace(/\/$/, ""),
   appUrl: (process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000").replace(/\/$/, ""),
