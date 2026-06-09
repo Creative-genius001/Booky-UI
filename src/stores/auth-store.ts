@@ -2,14 +2,14 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { AuthSession, User } from "@/types";
+import type { AuthResult, User } from "@/types";
 import { tokenStore } from "@/lib/api/token-store";
 
 interface AuthState {
   user: User | null;
   hydrated: boolean;
   isAuthenticated: boolean;
-  setSession: (session: AuthSession, remember: boolean) => void;
+  setSession: (session: AuthResult) => void;
   setUser: (user: User | null) => void;
   clear: () => void;
   setHydrated: () => void;
@@ -21,11 +21,10 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       hydrated: false,
       isAuthenticated: false,
-      setSession: (session, _remember) => {
+      setSession: (session) => {
         tokenStore.set({
-          accessToken: session.accessToken,
-          refreshToken: session.refreshToken,
-          expiresIn: session.expiresIn,
+          access_token: session.tokens.access_token,
+          refresh_token: session.tokens.refresh_token,
         });
         set({ user: session.user, isAuthenticated: true });
       },

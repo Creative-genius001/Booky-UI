@@ -3,20 +3,17 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { useUpsertBusinessDays } from "@/hooks/use-shop-admin";
+import { useUpsertSchedule } from "@/hooks/use-shop-admin";
 import { useShopStore } from "@/stores/shop-store";
 import { OnboardingProgress } from "@/components/onboarding/onboarding-progress";
-import {
-  BusinessHoursEditor,
-  defaultBusinessDays,
-} from "@/components/shop/business-hours-editor";
+import { ScheduleEditor } from "@/components/shop/schedule-editor";
 import { Button } from "@/components/ui/button";
 
 export default function BusinessHoursPage() {
   const router = useRouter();
   const activeShopId = useShopStore((s) => s.activeShopId);
   const setOnboardingComplete = useShopStore((s) => s.setOnboardingComplete);
-  const upsert = useUpsertBusinessDays(activeShopId ?? "");
+  const upsert = useUpsertSchedule(activeShopId ?? "");
 
   useEffect(() => {
     if (!activeShopId) router.replace("/onboarding/shop");
@@ -28,16 +25,16 @@ export default function BusinessHoursPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold tracking-tight">Business hours</h1>
         <p className="mt-1.5 text-sm text-muted-foreground">
-          Set when your shop is open. This is the last step — you're almost done.
+          Set your opening hours and which days you're open. This is the last
+          step — you can fine-tune individual days later.
         </p>
       </div>
 
-      <BusinessHoursEditor
-        initial={defaultBusinessDays()}
+      <ScheduleEditor
         saving={upsert.isPending}
         saveLabel="Finish setup"
-        onSave={(days) =>
-          upsert.mutate(days, {
+        onSave={(payload) =>
+          upsert.mutate(payload, {
             onSuccess: () => {
               setOnboardingComplete(true);
               router.push("/dashboard");

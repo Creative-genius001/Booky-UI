@@ -5,25 +5,21 @@ import { ShieldCheck, Lock, Pencil } from "lucide-react";
 import { useBookingStore } from "@/stores/booking-store";
 import { useInitiateBooking } from "@/hooks/use-bookings";
 import { useInitPayment } from "@/hooks/use-payment";
-import { config } from "@/lib/config";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { BookingSummary } from "@/components/booking/booking-summary";
 import { Separator } from "@/components/ui/separator";
 import { Alert } from "@/components/ui/alert";
-import { formatKobo } from "@/lib/utils";
+import { formatNaira } from "@/lib/utils";
+
+const PENDING_KEY = "bookly.pendingBooking";
 
 export function PaymentStep({
-  shopId,
-  slug,
   onEditDetails,
 }: {
-  shopId: string;
-  slug: string;
   onEditDetails: () => void;
 }) {
-  const store = useBookingStore();
-  const { service, date, startTime, customer, notes } = store;
+  const { service, startTime, customer, shopSlug } = useBookingStore();
   const initiate = useInitiateBooking();
   const initPayment = useInitPayment();
   const [redirecting, setRedirecting] = useState(false);
@@ -31,31 +27,34 @@ export function PaymentStep({
   const busy = initiate.isPending || initPayment.isPending || redirecting;
 
   async function pay() {
-    if (!service || !date || !startTime) return;
+    if (!service || !startTime) return;
     try {
-      const { booking, payment } = await initiate.mutateAsync({
-        shopId,
-        serviceId: service.id,
-        date,
-        startTime,
-        customer,
-        notes: notes || undefined,
+      const result = await initiate.mutateAsync({
+        service_id: service.id,
+        customer_name: customer.name,
+        customer_email: customer.email,
+        start_time: startTime,
       });
 
-      const callbackUrl = `${config.appUrl}/book/${slug}/success?code=${encodeURIComponent(
-        booking.code,
-      )}`;
+      // Stash the booking code so the Paystack callback (which only carries a
+      // payment reference) can look up and poll the booking's status.
+      try {
+        sessionStorage.setItem(
+          PENDING_KEY,
+          JSON.stringify({ code: result.booking.code, slug: shopSlug ?? "" }),
+        );
+      } catch {
+        /* ignore */
+      }
 
-      // Some backends return the Paystack URL straight from /bookings/initiate.
-      let authorizationUrl = payment?.authorizationUrl;
+      // The backend returns the Paystack URL straight from /bookings/initiate.
+      let authorizationUrl = result.authorization_url;
       if (!authorizationUrl) {
-        const init = await initPayment.mutateAsync({
-          bookingCode: booking.code,
-          bookingId: booking.id,
-          email: customer.email,
-          callbackUrl,
+        const retry = await initPayment.mutateAsync({
+          booking_code: result.booking.code,
+          payment_reference: result.booking.payment_reference,
         });
-        authorizationUrl = init.authorizationUrl;
+        authorizationUrl = retry.authorization_url;
       }
 
       if (authorizationUrl) {
@@ -95,8 +94,6 @@ export function PaymentStep({
           <dl className="grid gap-1.5 text-sm">
             <Detail label="Name" value={customer.name} />
             <Detail label="Email" value={customer.email} />
-            <Detail label="Phone" value={customer.phone} />
-            {notes && <Detail label="Notes" value={notes} />}
           </dl>
         </CardContent>
       </Card>
@@ -107,7 +104,7 @@ export function PaymentStep({
           <p className="text-sm text-muted-foreground">
             Payment is processed securely by{" "}
             <span className="font-medium text-foreground">Paystack</span>. Your
-            slot is held while you pay and confirmed the moment payment succeeds.
+            slot is held while you pay and confirmed once payment succeeds.
           </p>
         </div>
       </Alert>
@@ -122,7 +119,7 @@ export function PaymentStep({
         <Lock className="size-4" />
         {redirecting
           ? "Redirecting to Paystack…"
-          : `Pay ${formatKobo(service.priceKobo)}`}
+          : `Pay ${formatNaira(service.price)}`}
       </Button>
     </div>
   );

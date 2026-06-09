@@ -6,7 +6,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { servicesApi, type ServiceInput } from "@/lib/api/services";
+import { servicesApi, type ServicePayload } from "@/lib/api/services";
 import { queryKeys } from "@/lib/query/keys";
 import { errorMessage } from "@/hooks/use-auth";
 import type { Service } from "@/types";
@@ -19,8 +19,9 @@ export function useServices(
     queryKey: queryKeys.services.list(shopId ?? ""),
     queryFn: () => servicesApi.list(shopId as string),
     enabled: !!shopId,
+    staleTime: 60_000,
     select: (data) =>
-      opts.activeOnly ? data.filter((s) => s.isActive) : data,
+      opts.activeOnly ? data.filter((s) => s.is_active) : data,
   });
 }
 
@@ -35,7 +36,7 @@ export function useService(serviceId: string | undefined) {
 export function useCreateService(shopId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: ServiceInput) => servicesApi.create(shopId, input),
+    mutationFn: (input: ServicePayload) => servicesApi.create(shopId, input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.services.list(shopId) });
       toast.success("Service created");
@@ -47,25 +48,13 @@ export function useCreateService(shopId: string) {
 export function useUpdateService(shopId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, input }: { id: string; input: Partial<ServiceInput> }) =>
+    mutationFn: ({ id, input }: { id: string; input: ServicePayload }) =>
       servicesApi.update(shopId, id, input),
-    onMutate: async ({ id, input }) => {
-      await qc.cancelQueries({ queryKey: queryKeys.services.list(shopId) });
-      const prev = qc.getQueryData<Service[]>(queryKeys.services.list(shopId));
-      if (prev) {
-        qc.setQueryData<Service[]>(
-          queryKeys.services.list(shopId),
-          prev.map((s) => (s.id === id ? { ...s, ...input } : s)),
-        );
-      }
-      return { prev };
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.services.list(shopId) });
+      toast.success("Service updated");
     },
-    onError: (e, _vars, ctx) => {
-      if (ctx?.prev) qc.setQueryData(queryKeys.services.list(shopId), ctx.prev);
-      toast.error(errorMessage(e, "Could not update service"));
-    },
-    onSettled: () =>
-      qc.invalidateQueries({ queryKey: queryKeys.services.list(shopId) }),
+    onError: (e) => toast.error(errorMessage(e, "Could not update service")),
   });
 }
 

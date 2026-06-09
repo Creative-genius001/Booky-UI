@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
-import { formatKobo, formatDuration } from "@/lib/utils";
+import { formatNaira, formatDuration } from "@/lib/utils";
 import type { Service } from "@/types";
 
 export default function ServicesPage() {
@@ -60,7 +60,7 @@ export default function ServicesPage() {
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <h3 className="truncate font-semibold">{s.name}</h3>
-                      {!s.isActive && <Badge variant="muted">Inactive</Badge>}
+                      {!s.is_active && <Badge variant="muted">Inactive</Badge>}
                     </div>
                     {s.description && (
                       <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
@@ -72,11 +72,11 @@ export default function ServicesPage() {
                 <div className="mt-4 flex items-center justify-between">
                   <div className="flex items-center gap-3 text-sm">
                     <span className="font-bold text-foreground">
-                      {formatKobo(s.priceKobo)}
+                      {formatNaira(s.price)}
                     </span>
                     <span className="inline-flex items-center gap-1 text-muted-foreground">
                       <Clock className="size-3.5" />
-                      {formatDuration(s.durationMinutes)}
+                      {formatDuration(s.duration_in_minutes)}
                     </span>
                   </div>
                   <div className="flex gap-1">

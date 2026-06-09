@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/ui/form-field";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
-import { longDate, todayISO, isPastDate } from "@/lib/dates";
+import { longDate, todayISO, isPastDate, isoDatePart } from "@/lib/dates";
 
 export default function BlockedDatesPage() {
   const { shopId } = useActiveShop();
@@ -27,7 +27,8 @@ export default function BlockedDatesPage() {
   const [date, setDate] = useState<string | null>(null);
   const [reason, setReason] = useState("");
 
-  const blockedSet = new Set(data?.map((d) => d.date));
+  // Backend returns each blocked date as a timestamp; compare on the date part.
+  const blockedSet = new Set(data?.map((d) => isoDatePart(d.date)));
 
   function submit() {
     if (!date) return;

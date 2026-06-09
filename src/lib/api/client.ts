@@ -1,24 +1,20 @@
 import { config } from "@/lib/config";
-import type { ApiErrorBody } from "@/types";
+import type { ApiErrorBody, AuthResult } from "@/types";
 import { tokenStore } from "@/lib/api/token-store";
 
 export class ApiError extends Error {
   status: number;
-  code?: string;
-  details?: Record<string, string[]>;
+  code?: number;
 
   constructor(status: number, body: ApiErrorBody | string) {
     const message =
       typeof body === "string"
         ? body
-        : body.message || body.error || `Request failed (${status})`;
+        : body.error || body.message || `Request failed (${status})`;
     super(message);
     this.name = "ApiError";
     this.status = status;
-    if (typeof body !== "string") {
-      this.code = body.code;
-      this.details = body.details;
-    }
+    if (typeof body !== "string") this.code = body.code;
   }
 }
 
@@ -39,7 +35,7 @@ let refreshPromise: Promise<boolean> | null = null;
 /** Attempt to refresh the access token, deduping concurrent calls. */
 async function tryRefresh(): Promise<boolean> {
   if (refreshPromise) return refreshPromise;
-  const refreshToken = tokenStore.get()?.refreshToken;
+  const refreshToken = tokenStore.get()?.refresh_token;
   if (!refreshToken) return false;
 
   refreshPromise = (async () => {
@@ -47,20 +43,22 @@ async function tryRefresh(): Promise<boolean> {
       const res = await fetch(`${config.apiBaseUrl}/auth/refresh`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refreshToken }),
+        body: JSON.stringify({ refresh_token: refreshToken }),
       });
       if (!res.ok) {
         tokenStore.clear();
         return false;
       }
-      const data = (await res.json()) as {
-        accessToken: string;
-        refreshToken?: string;
-      };
-      const current = tokenStore.get();
+      // /auth/refresh returns { data: { user, tokens } }.
+      const json = (await res.json()) as { data?: AuthResult };
+      const tokens = json.data?.tokens;
+      if (!tokens?.access_token) {
+        tokenStore.clear();
+        return false;
+      }
       tokenStore.set({
-        accessToken: data.accessToken,
-        refreshToken: data.refreshToken ?? current?.refreshToken ?? refreshToken,
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token ?? refreshToken,
       });
       return true;
     } catch {
@@ -83,6 +81,14 @@ async function parse(res: Response): Promise<unknown> {
   }
 }
 
+/** Unwrap the backend's `{ data: T }` success envelope. */
+function unwrap<T>(parsed: unknown): T {
+  if (parsed && typeof parsed === "object" && "data" in parsed) {
+    return (parsed as { data: T }).data;
+  }
+  return parsed as T;
+}
+
 export async function apiFetch<T = unknown>(
   path: string,
   options: RequestOptions = {},
@@ -94,7 +100,7 @@ export async function apiFetch<T = unknown>(
     finalHeaders.set("Content-Type", "application/json");
   }
   if (auth) {
-    const token = tokenStore.get()?.accessToken;
+    const token = tokenStore.get()?.access_token;
     if (token) finalHeaders.set("Authorization", `Bearer ${token}`);
   }
 
@@ -110,18 +116,19 @@ export async function apiFetch<T = unknown>(
   if (res.status === 401 && auth && !skipRefresh) {
     const refreshed = await tryRefresh();
     if (refreshed) {
-      const token = tokenStore.get()?.accessToken;
+      const token = tokenStore.get()?.access_token;
       if (token) finalHeaders.set("Authorization", `Bearer ${token}`);
       res = await doFetch();
     }
   }
 
+  const parsed = await parse(res);
+
   if (!res.ok) {
-    const parsed = await parse(res);
     throw new ApiError(res.status, (parsed as ApiErrorBody | string) ?? "");
   }
 
-  return (await parse(res)) as T;
+  return unwrap<T>(parsed);
 }
 
 export const api = {

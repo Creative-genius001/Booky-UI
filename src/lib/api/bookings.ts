@@ -1,50 +1,62 @@
 import { api } from "@/lib/api/client";
 import type {
-  Booking,
-  BookingStatus,
-  InitiateBookingRequest,
-  InitiateBookingResponse,
+  BookingListItem,
+  BookingListResult,
+  InitiateResult,
 } from "@/types";
+
+export interface InitiateBookingPayload {
+  service_id: string;
+  customer_name: string;
+  customer_email: string;
+  /** RFC-3339 start time taken from the selected availability slot. */
+  start_time: string;
+}
 
 export interface ListBookingsParams {
   shopId: string;
-  status?: BookingStatus | "all";
+  status?: string;
+  search?: string;
   page?: number;
   pageSize?: number;
 }
 
-export interface ListBookingsResponse {
-  bookings: Booking[];
-  total: number;
-  page: number;
-  pageSize: number;
-}
-
 export const bookingsApi = {
-  /** Router: POST /bookings/initiate (public, no account). */
-  initiate: (payload: InitiateBookingRequest) =>
-    api.post<InitiateBookingResponse>("/bookings/initiate", payload, {
+  /**
+   * POST /bookings/initiate (public, no account). Creates a pending booking +
+   * payment and returns the Paystack authorization URL to redirect to.
+   */
+  initiate: (payload: InitiateBookingPayload) =>
+    api.post<InitiateResult>("/bookings/initiate", payload, { auth: false }),
+
+  /** GET /bookings/:code (public) — booking status for the success page. */
+  getByCode: (code: string) =>
+    api.get<BookingListItem>(`/bookings/${encodeURIComponent(code)}`, {
       auth: false,
     }),
 
-  /** Public lookup by booking code (success screen / status polling). */
-  getByCode: (code: string) =>
-    api.get<Booking>(`/bookings/${encodeURIComponent(code)}`, { auth: false }),
+  /** POST /bookings/cancel (public, by code). */
+  cancel: (code: string) =>
+    api.post<BookingListItem>("/bookings/cancel", { code }, { auth: false }),
 
-  // ---- Owner dashboard (guarded by auth on the backend) ----
-  list: ({ shopId, status = "all", page = 1, pageSize = 20 }: ListBookingsParams) => {
+  /** POST /bookings/reschedule (public, by code) — start_time is RFC-3339. */
+  reschedule: (code: string, start_time: string) =>
+    api.post<BookingListItem>(
+      "/bookings/reschedule",
+      { code, start_time },
+      { auth: false },
+    ),
+
+  /** GET /shops/:id/bookings — owner-scoped, paginated + searchable. */
+  list: ({ shopId, status, search, page = 1, pageSize = 20 }: ListBookingsParams) => {
     const qs = new URLSearchParams({
-      shopId,
-      status,
       page: String(page),
-      pageSize: String(pageSize),
+      page_size: String(pageSize),
     });
-    return api.get<ListBookingsResponse>(`/bookings?${qs.toString()}`);
+    if (status && status !== "all") qs.set("status", status);
+    if (search) qs.set("search", search);
+    return api.get<BookingListResult>(
+      `/shops/${shopId}/bookings?${qs.toString()}`,
+    );
   },
-
-  updateStatus: (bookingId: string, status: BookingStatus) =>
-    api.patch<Booking>(`/bookings/${bookingId}`, { status }),
-
-  cancel: (bookingId: string) =>
-    api.post<Booking>(`/bookings/${bookingId}/cancel`),
 };

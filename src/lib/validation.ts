@@ -1,27 +1,26 @@
 import { z } from "zod";
 
+// ---- Customer booking ----
 export const customerSchema = z.object({
   name: z
     .string()
     .trim()
     .min(2, "Please enter your full name")
-    .max(80, "Name is too long"),
+    .max(100, "Name is too long"),
   email: z.string().trim().email("Enter a valid email address"),
-  phone: z
-    .string()
-    .trim()
-    .min(7, "Enter a valid phone number")
-    .max(20, "Phone number is too long")
-    .regex(/^[+()\-\s\d]+$/, "Enter a valid phone number"),
-  notes: z.string().trim().max(500, "Notes are too long").optional(),
 });
 export type CustomerForm = z.infer<typeof customerSchema>;
 
-// ---- Auth ----
+// ---- Auth (owners only; backend signup requires email, phone, password) ----
 export const signupSchema = z
   .object({
-    fullName: z.string().trim().min(2, "Enter your full name").max(80),
     email: z.string().trim().email("Enter a valid email"),
+    phone: z
+      .string()
+      .trim()
+      .min(7, "Enter a valid phone number")
+      .max(20, "Phone number is too long")
+      .regex(/^[+()\-\s\d]+$/, "Enter a valid phone number"),
     password: z.string().min(8, "Use at least 8 characters").max(72),
     confirmPassword: z.string(),
   })
@@ -56,36 +55,66 @@ export type ResetForm = z.infer<typeof resetSchema>;
 
 // ---- Onboarding / shop ----
 export const createShopSchema = z.object({
-  name: z.string().trim().min(2, "Shop name is required").max(80),
+  name: z.string().trim().min(2, "Shop name is required").max(150),
   slug: z
     .string()
     .trim()
-    .min(3, "Slug must be at least 3 characters")
-    .max(40)
-    .regex(/^[a-z0-9-]+$/, "Use lowercase letters, numbers and hyphens"),
-  phone: z.string().trim().max(20).optional(),
-  address: z.string().trim().max(160).optional(),
-  description: z.string().trim().max(400).optional(),
-  logoUrl: z.string().url("Enter a valid URL").optional().or(z.literal("")),
-  coverImageUrl: z.string().url("Enter a valid URL").optional().or(z.literal("")),
+    .max(180)
+    .regex(/^[a-z0-9-]*$/, "Use lowercase letters, numbers and hyphens")
+    .optional(),
+  email: z.string().trim().email("Enter a valid email"),
+  phone: z
+    .string()
+    .trim()
+    .min(7, "Enter a valid phone number")
+    .max(40, "Phone number is too long"),
+  timezone: z.string().trim().min(1, "Select a timezone"),
+  address: z.string().trim().max(255).optional(),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
+  logo_url: z.string().trim().max(500).optional(),
+  cover_image_url: z.string().trim().max(500).optional(),
 });
 export type CreateShopForm = z.infer<typeof createShopSchema>;
 
-export const bookingConfigSchema = z.object({
-  capacity: z.coerce.number().int().min(1, "At least 1").max(100),
-  bookingWindowDays: z.coerce.number().int().min(1).max(120),
-  slotIntervalMinutes: z.coerce.number().int().min(5).max(240),
-  bufferMinutes: z.coerce.number().int().min(0).max(120),
-  cancellationHours: z.coerce.number().int().min(0).max(168),
+// Capacity & appointment length (PATCH /shops/:id). barbing_duration is capped
+// at 120 minutes by the backend.
+export const capacityConfigSchema = z.object({
+  capacity_per_slot: z.coerce.number().int().min(1, "At least 1").max(100),
+  barbing_duration: z.coerce
+    .number()
+    .int()
+    .min(1, "At least 1 minute")
+    .max(120, "Max 120 minutes"),
 });
-export type BookingConfigForm = z.infer<typeof bookingConfigSchema>;
+export type CapacityConfigForm = z.infer<typeof capacityConfigSchema>;
 
+// Uniform weekly schedule (POST /shops/:id/business-days).
+export const scheduleSchema = z
+  .object({
+    open_time: z.string().regex(/^\d{2}:\d{2}$/, "Required"),
+    close_time: z.string().regex(/^\d{2}:\d{2}$/, "Required"),
+    active_days: z.array(z.number().int().min(0).max(6)),
+  })
+  .refine((d) => d.close_time > d.open_time, {
+    message: "Closing time must be after opening time",
+    path: ["close_time"],
+  })
+  .refine((d) => d.active_days.length > 0, {
+    message: "Select at least one open day",
+    path: ["active_days"],
+  });
+export type ScheduleForm = z.infer<typeof scheduleSchema>;
+
+// ---- Services (price in Naira; barbing_duration maps to duration_in_minutes) ----
 export const serviceSchema = z.object({
-  name: z.string().trim().min(2, "Service name is required").max(80),
-  description: z.string().trim().max(300).optional(),
-  durationMinutes: z.coerce.number().int().min(5, "Min 5 minutes").max(480),
-  // Captured in Naira from the UI, converted to kobo before sending.
-  priceNaira: z.coerce.number().min(0, "Enter a price").max(10_000_000),
-  isActive: z.boolean().default(true),
+  name: z.string().trim().min(2, "Service name is required").max(150),
+  description: z.string().trim().max(255).optional(),
+  price: z.coerce.number().int().min(0, "Enter a price").max(10_000_000),
+  barbing_duration: z.coerce
+    .number()
+    .int()
+    .min(1, "At least 1 minute")
+    .max(120, "Max 120 minutes"),
 });
 export type ServiceForm = z.infer<typeof serviceSchema>;

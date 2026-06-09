@@ -17,7 +17,7 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!hydrated) return;
-    const hasToken = !!tokenStore.get()?.accessToken;
+    const hasToken = !!tokenStore.get()?.access_token;
     if (!isAuthenticated || !hasToken) {
       router.replace("/login");
     }

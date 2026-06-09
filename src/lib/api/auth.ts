@@ -1,9 +1,9 @@
 import { api } from "@/lib/api/client";
-import type { AuthSession, AuthTokens, User } from "@/types";
+import type { AuthResult } from "@/types";
 
 export interface SignupPayload {
-  fullName: string;
   email: string;
+  phone: string;
   password: string;
 }
 export interface LoginPayload {
@@ -12,31 +12,54 @@ export interface LoginPayload {
 }
 
 export const authApi = {
+  /**
+   * Only shop owners self-register; the backend rejects any other role.
+   * Returns { user, tokens } and is immediately authenticated (no email
+   * verification step exists in the backend).
+   */
   signup: (payload: SignupPayload) =>
-    api.post<AuthSession>("/auth/signup", payload, { auth: false }),
+    api.post<AuthResult>(
+      "/auth/signup",
+      { ...payload, role: "owner" },
+      { auth: false },
+    ),
 
   login: (payload: LoginPayload) =>
-    api.post<AuthSession>("/auth/login", payload, { auth: false }),
+    api.post<AuthResult>("/auth/login", payload, { auth: false }),
 
   refresh: (refreshToken: string) =>
-    api.post<AuthTokens>("/auth/refresh", { refreshToken }, {
-      auth: false,
-      skipRefresh: true,
+    api.post<AuthResult>(
+      "/auth/refresh",
+      { refresh_token: refreshToken },
+      { auth: false, skipRefresh: true },
+    ),
+
+  logout: (refreshToken?: string) =>
+    api.post<{ message: string }>("/auth/logout", {
+      refresh_token: refreshToken,
     }),
 
-  logout: () => api.post<void>("/auth/logout"),
-
-  /** Best-effort current-user fetch; backend may expose /auth/me. */
-  me: () => api.get<User>("/auth/me"),
-
-  // The following endpoints are required by the spec's auth screens but are
-  // not yet wired in router.go. Paths are inferred; adjust if the API differs.
-  verifyEmail: (token: string) =>
-    api.post<void>("/auth/verify-email", { token }, { auth: false }),
-  resendVerification: (email: string) =>
-    api.post<void>("/auth/resend-verification", { email }, { auth: false }),
   forgotPassword: (email: string) =>
-    api.post<void>("/auth/forgot-password", { email }, { auth: false }),
+    api.post<{ message: string }>(
+      "/auth/forgot-password",
+      { email },
+      { auth: false },
+    ),
+
   resetPassword: (token: string, password: string) =>
-    api.post<void>("/auth/reset-password", { token, password }, { auth: false }),
+    api.post<{ message: string }>(
+      "/auth/reset-password",
+      { token, password },
+      { auth: false },
+    ),
+
+  verifyEmail: (token: string) =>
+    api.post<{ message: string }>("/auth/verify-email", { token }, { auth: false }),
+
+  resendVerification: (email: string) =>
+    api.post<{ message: string }>(
+      "/auth/resend-verification",
+      { email },
+      { auth: false },
+    ),
 };

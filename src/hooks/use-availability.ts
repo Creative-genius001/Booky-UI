@@ -5,21 +5,16 @@ import { availabilityApi } from "@/lib/api/availability";
 import { queryKeys } from "@/lib/query/keys";
 
 export function useAvailability(params: {
-  shopId: string | undefined;
+  shopSlug: string | undefined;
   date: string | undefined;
-  serviceId?: string;
   enabled?: boolean;
 }) {
-  const { shopId, date, serviceId, enabled = true } = params;
+  const { shopSlug, date, enabled = true } = params;
   return useQuery({
-    queryKey: queryKeys.availability.byDate(shopId ?? "", date ?? "", serviceId),
+    queryKey: queryKeys.availability.byDate(shopSlug ?? "", date ?? ""),
     queryFn: () =>
-      availabilityApi.get({
-        shopId: shopId as string,
-        date: date as string,
-        serviceId,
-      }),
-    enabled: enabled && !!shopId && !!date,
+      availabilityApi.get({ shopSlug: shopSlug as string, date: date as string }),
+    enabled: enabled && !!shopSlug && !!date,
     placeholderData: keepPreviousData,
     staleTime: 15_000,
   });

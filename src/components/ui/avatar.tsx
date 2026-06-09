@@ -26,7 +26,15 @@ export function Avatar({ src, name, size = "md", className, ...props }: AvatarPr
       {...props}
     >
       {src ? (
-        <img src={src} alt={name ?? "avatar"} className="h-full w-full object-cover" />
+        // Plain lazy <img>: avatars are tiny and the API exposes no image URLs
+        // today, so next/image's runtime would be pure overhead.
+        <img
+          src={src}
+          alt={name ?? "avatar"}
+          loading="lazy"
+          decoding="async"
+          className="h-full w-full object-cover"
+        />
       ) : (
         <span>{getInitials(name ?? "")}</span>
       )}

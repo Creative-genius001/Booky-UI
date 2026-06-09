@@ -1,10 +1,10 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
-import { CheckCircle2, MailCheck } from "lucide-react";
+import { CheckCircle2, MailCheck, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { authApi } from "@/lib/api/auth";
 import { useAuthStore } from "@/stores/auth-store";
@@ -18,15 +18,20 @@ function VerifyEmailInner() {
   const token = params.get("token");
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [verified, setVerified] = useState(false);
+  const verifiedOnce = useRef(false);
 
   const verify = useMutation({
     mutationFn: (t: string) => authApi.verifyEmail(t),
     onSuccess: () => {
       setVerified(true);
-      if (user) setUser({ ...user, emailVerified: true });
+      if (user) setUser({ ...user, email_verified: true });
       toast.success("Email verified!");
-      setTimeout(() => router.push("/onboarding/shop"), 1200);
+      setTimeout(
+        () => router.push(isAuthenticated ? "/onboarding/shop" : "/login"),
+        1200,
+      );
     },
     onError: (e) => toast.error(errorMessage(e, "Verification link is invalid")),
   });
@@ -37,12 +42,16 @@ function VerifyEmailInner() {
     onError: (e) => toast.error(errorMessage(e, "Could not resend email")),
   });
 
+  // Auto-verify when arriving from the email link.
   useEffect(() => {
-    if (token) verify.mutate(token);
+    if (token && !verifiedOnce.current) {
+      verifiedOnce.current = true;
+      verify.mutate(token);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  // Verifying via token from email link
+  // ---- Token flow (from the email link) ----
   if (token) {
     return (
       <div className="text-center">
@@ -60,31 +69,34 @@ function VerifyEmailInner() {
               <CheckCircle2 className="size-8 text-success" />
             </div>
             <h1 className="mt-6 text-2xl font-bold">Email verified</h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Taking you to set up your shop…
-            </p>
+            <p className="mt-2 text-sm text-muted-foreground">Taking you along…</p>
           </>
         )}
         {verify.isError && (
           <>
+            <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-destructive/15">
+              <XCircle className="size-8 text-destructive" />
+            </div>
             <h1 className="mt-6 text-2xl font-bold">Link expired</h1>
             <p className="mt-2 text-sm text-muted-foreground">
               That verification link is invalid or has expired.
             </p>
-            <Button
-              className="mt-6"
-              onClick={() => resend.mutate()}
-              loading={resend.isPending}
-            >
-              Resend verification email
-            </Button>
+            {user?.email && (
+              <Button
+                className="mt-6"
+                onClick={() => resend.mutate()}
+                loading={resend.isPending}
+              >
+                Resend verification email
+              </Button>
+            )}
           </>
         )}
       </div>
     );
   }
 
-  // Post-signup "check your inbox" state
+  // ---- Post-signup "check your inbox" state ----
   return (
     <div className="text-center">
       <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-primary/10">
@@ -96,7 +108,7 @@ function VerifyEmailInner() {
         <span className="font-medium text-foreground">
           {user?.email ?? "your email"}
         </span>
-        . Click it to activate your account.
+        . Click it to confirm your account.
       </p>
 
       <Button
@@ -110,13 +122,13 @@ function VerifyEmailInner() {
       </Button>
 
       <p className="mt-6 text-sm text-muted-foreground">
-        Already verified?{" "}
         <Link
           href="/onboarding/shop"
           className="font-semibold text-primary hover:underline"
         >
-          Continue setup
-        </Link>
+          Continue to setup
+        </Link>{" "}
+        — you can verify later.
       </p>
     </div>
   );

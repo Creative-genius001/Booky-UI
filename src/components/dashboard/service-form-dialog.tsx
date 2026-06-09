@@ -17,8 +17,6 @@ import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import type { Service } from "@/types";
 
 export function ServiceFormDialog({
@@ -41,17 +39,14 @@ export function ServiceFormDialog({
     register,
     handleSubmit,
     reset,
-    setValue,
-    watch,
     formState: { errors },
   } = useForm<ServiceForm>({
     resolver: zodResolver(serviceSchema),
     defaultValues: {
       name: "",
       description: "",
-      durationMinutes: 30,
-      priceNaira: 0,
-      isActive: true,
+      barbing_duration: 60,
+      price: 0,
     },
   });
 
@@ -60,22 +55,18 @@ export function ServiceFormDialog({
       reset({
         name: service?.name ?? "",
         description: service?.description ?? "",
-        durationMinutes: service?.durationMinutes ?? 30,
-        priceNaira: service ? service.priceKobo / 100 : 0,
-        isActive: service?.isActive ?? true,
+        barbing_duration: service?.duration_in_minutes ?? 60,
+        price: service?.price ?? 0,
       });
     }
   }, [open, service, reset]);
-
-  const isActive = watch("isActive");
 
   function submit(values: ServiceForm) {
     const payload = {
       name: values.name,
       description: values.description || undefined,
-      durationMinutes: values.durationMinutes,
-      priceKobo: Math.round(values.priceNaira * 100),
-      isActive: values.isActive,
+      price: values.price,
+      barbing_duration: values.barbing_duration,
     };
     const onSuccess = () => onOpenChange(false);
     if (isEdit && service) {
@@ -129,48 +120,34 @@ export function ServiceFormDialog({
               label="Duration"
               htmlFor="svc-duration"
               required
-              error={errors.durationMinutes?.message}
+              error={errors.barbing_duration?.message}
             >
               <Input
                 id="svc-duration"
                 type="number"
                 inputMode="numeric"
-                invalid={!!errors.durationMinutes}
+                invalid={!!errors.barbing_duration}
                 rightSlot={
                   <span className="pr-2 text-xs text-muted-foreground">min</span>
                 }
-                {...register("durationMinutes")}
+                {...register("barbing_duration")}
               />
             </FormField>
             <FormField
               label="Price"
               htmlFor="svc-price"
               required
-              error={errors.priceNaira?.message}
+              error={errors.price?.message}
             >
               <Input
                 id="svc-price"
                 type="number"
-                inputMode="decimal"
-                invalid={!!errors.priceNaira}
+                inputMode="numeric"
+                invalid={!!errors.price}
                 leftIcon={<span className="text-sm">₦</span>}
-                {...register("priceNaira")}
+                {...register("price")}
               />
             </FormField>
-          </div>
-
-          <div className="flex items-center justify-between rounded-lg border border-border p-3">
-            <div>
-              <Label htmlFor="svc-active">Active</Label>
-              <p className="text-xs text-muted-foreground">
-                Only active services are bookable.
-              </p>
-            </div>
-            <Switch
-              id="svc-active"
-              checked={isActive}
-              onCheckedChange={(v) => setValue("isActive", v)}
-            />
           </div>
 
           <DialogFooter>

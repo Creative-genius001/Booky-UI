@@ -4,14 +4,16 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 /**
- * Tracks the owner's active shop id. router.go exposes no "list my shops"
- * endpoint, so we remember the shop created/managed by this owner locally and
- * fetch its details via GET /shops/:id. Adjust if the API gains /shops/me.
+ * Tracks the owner's active shop. The backend exposes no "list my shops"
+ * endpoint and GET /shops/:id resolves by SLUG, while owner mutations are keyed
+ * by the shop UUID — so we remember both the id (for mutations) and the slug
+ * (for public fetch + the booking link) after the shop is created.
  */
 interface ShopState {
   activeShopId: string | null;
+  activeShopSlug: string | null;
   onboardingComplete: boolean;
-  setActiveShop: (id: string) => void;
+  setActiveShop: (id: string, slug: string) => void;
   setOnboardingComplete: (done: boolean) => void;
   clear: () => void;
 }
@@ -20,10 +22,17 @@ export const useShopStore = create<ShopState>()(
   persist(
     (set) => ({
       activeShopId: null,
+      activeShopSlug: null,
       onboardingComplete: false,
-      setActiveShop: (id) => set({ activeShopId: id }),
+      setActiveShop: (id, slug) =>
+        set({ activeShopId: id, activeShopSlug: slug }),
       setOnboardingComplete: (done) => set({ onboardingComplete: done }),
-      clear: () => set({ activeShopId: null, onboardingComplete: false }),
+      clear: () =>
+        set({
+          activeShopId: null,
+          activeShopSlug: null,
+          onboardingComplete: false,
+        }),
     }),
     { name: "bookly.shop" },
   ),

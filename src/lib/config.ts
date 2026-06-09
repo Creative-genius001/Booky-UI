@@ -2,7 +2,21 @@
 export const config = {
   apiBaseUrl: (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080").replace(/\/$/, ""),
   appUrl: (process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000").replace(/\/$/, ""),
+  /** Public Mapbox token; when empty the app degrades to a list-only experience. */
+  mapboxToken: process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "",
 } as const;
+
+/** Common IANA timezones offered during shop setup (backend validates against tzdata). */
+export const TIMEZONES = [
+  "Africa/Lagos",
+  "Africa/Accra",
+  "Africa/Nairobi",
+  "Africa/Johannesburg",
+  "Africa/Cairo",
+  "UTC",
+  "Europe/London",
+  "America/New_York",
+] as const;
 
 export const WEEKDAYS = [
   { key: 0, short: "Sun", long: "Sunday" },

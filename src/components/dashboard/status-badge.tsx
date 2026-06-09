@@ -5,11 +5,11 @@ const BOOKING_MAP: Record<
   BookingStatus,
   { label: string; variant: React.ComponentProps<typeof Badge>["variant"] }
 > = {
-  pending: { label: "Pending", variant: "warning" },
+  pending_payment: { label: "Pending payment", variant: "warning" },
   confirmed: { label: "Confirmed", variant: "success" },
-  completed: { label: "Completed", variant: "secondary" },
   cancelled: { label: "Cancelled", variant: "destructive" },
-  no_show: { label: "No show", variant: "muted" },
+  refunded: { label: "Refunded", variant: "muted" },
+  expired: { label: "Expired", variant: "muted" },
 };
 
 const PAYMENT_MAP: Record<
@@ -17,13 +17,13 @@ const PAYMENT_MAP: Record<
   { label: string; variant: React.ComponentProps<typeof Badge>["variant"] }
 > = {
   pending: { label: "Unpaid", variant: "warning" },
-  paid: { label: "Paid", variant: "success" },
+  success: { label: "Paid", variant: "success" },
   failed: { label: "Failed", variant: "destructive" },
   refunded: { label: "Refunded", variant: "muted" },
 };
 
 export function BookingStatusBadge({ status }: { status: BookingStatus }) {
-  const c = BOOKING_MAP[status] ?? BOOKING_MAP.pending;
+  const c = BOOKING_MAP[status] ?? BOOKING_MAP.pending_payment;
   return <Badge variant={c.variant}>{c.label}</Badge>;
 }
 

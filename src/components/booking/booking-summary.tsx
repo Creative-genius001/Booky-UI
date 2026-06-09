@@ -2,8 +2,8 @@
 
 import { CalendarDays, Clock, Scissors } from "lucide-react";
 import { useBookingStore } from "@/stores/booking-store";
-import { formatKobo, formatDuration, formatTimeLabel } from "@/lib/utils";
-import { friendlyDate } from "@/lib/dates";
+import { formatNaira, formatDuration, formatTimeLabel } from "@/lib/utils";
+import { friendlyDate, isoClock } from "@/lib/dates";
 import { Separator } from "@/components/ui/separator";
 
 export function BookingSummary({ compact = false }: { compact?: boolean }) {
@@ -16,7 +16,7 @@ export function BookingSummary({ compact = false }: { compact?: boolean }) {
       <Row
         icon={<Scissors className="size-4" />}
         label={service.name}
-        value={formatDuration(service.durationMinutes)}
+        value={formatDuration(service.duration_in_minutes)}
       />
       {date && (
         <Row
@@ -29,14 +29,14 @@ export function BookingSummary({ compact = false }: { compact?: boolean }) {
         <Row
           icon={<Clock className="size-4" />}
           label="Time"
-          value={formatTimeLabel(startTime)}
+          value={formatTimeLabel(isoClock(startTime))}
         />
       )}
       {!compact && <Separator />}
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium text-muted-foreground">Total</span>
         <span className="text-lg font-bold text-foreground">
-          {formatKobo(service.priceKobo)}
+          {formatNaira(service.price)}
         </span>
       </div>
     </div>

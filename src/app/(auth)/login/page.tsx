@@ -10,23 +10,17 @@ import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 
 export default function LoginPage() {
   const login = useLogin();
   const {
     register,
     handleSubmit,
-    setValue,
-    watch,
     formState: { errors },
   } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "", remember: true },
   });
-
-  const remember = watch("remember");
 
   return (
     <div>
@@ -38,7 +32,9 @@ export default function LoginPage() {
       </div>
 
       <form
-        onSubmit={handleSubmit((v) => login.mutate(v))}
+        onSubmit={handleSubmit((v) =>
+          login.mutate({ email: v.email, password: v.password }),
+        )}
         className="space-y-4"
         noValidate
       >
@@ -69,17 +65,7 @@ export default function LoginPage() {
           />
         </FormField>
 
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Switch
-              id="remember"
-              checked={remember}
-              onCheckedChange={(v) => setValue("remember", v)}
-            />
-            <Label htmlFor="remember" className="cursor-pointer text-sm">
-              Remember me
-            </Label>
-          </div>
+        <div className="flex justify-end">
           <Link
             href="/forgot-password"
             className="text-sm font-medium text-primary hover:underline"

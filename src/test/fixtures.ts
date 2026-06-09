@@ -1,150 +1,154 @@
 import type {
   AnalyticsSummary,
-  AuthSession,
-  Booking,
+  AuthResult,
+  AvailableSlot,
+  BookingListItem,
   BusinessDay,
+  InitiateResult,
   Service,
   Shop,
-  Slot,
 } from "@/types";
 
-/** Shared mock data used by both MSW (unit/component) and Playwright (e2e). */
+/** Shared mock data matching the backend JSON contracts (snake_case). */
 
 export const mockShop: Shop = {
-  id: "shop_1",
-  ownerId: "user_1",
+  id: "11111111-1111-1111-1111-111111111111",
+  owner_id: "99999999-9999-9999-9999-999999999999",
   name: "Kingsway Cuts",
   slug: "demo-shop",
+  email: "shop@example.com",
   phone: "+234 800 000 0000",
-  address: "12 Marina Rd, Lagos",
-  description: "A premium grooming experience in the heart of the city.",
-  logoUrl: null,
-  coverImageUrl: null,
-  capacity: 3,
-  bookingWindowDays: 14,
-  slotIntervalMinutes: 30,
-  bufferMinutes: 0,
-  cancellationHours: 2,
-  paystackConnected: true,
+  timezone: "Africa/Lagos",
+  is_active: true,
+  barbing_duration: 45,
+  capacity_per_slot: 3,
 };
 
 export const mockServices: Service[] = [
   {
-    id: "svc_1",
-    shopId: "shop_1",
+    id: "svc-1",
+    shop_id: mockShop.id,
     name: "Skin Fade",
     description: "Sharp, clean fade with a razor finish.",
-    durationMinutes: 45,
-    priceKobo: 500000,
-    isActive: true,
+    price: 5000,
+    duration_in_minutes: 45,
+    is_active: true,
   },
   {
-    id: "svc_2",
-    shopId: "shop_1",
+    id: "svc-2",
+    shop_id: mockShop.id,
     name: "Beard Trim",
     description: "Shape-up and hot towel finish.",
-    durationMinutes: 20,
-    priceKobo: 250000,
-    isActive: true,
+    price: 2500,
+    duration_in_minutes: 20,
+    is_active: true,
   },
   {
-    id: "svc_3",
-    shopId: "shop_1",
+    id: "svc-3",
+    shop_id: mockShop.id,
     name: "Kids Cut",
     description: "Quick and friendly cut for under-12s.",
-    durationMinutes: 30,
-    priceKobo: 300000,
-    isActive: false,
+    price: 3000,
+    duration_in_minutes: 30,
+    is_active: false,
   },
 ];
 
-export const mockSlots: Slot[] = [
-  { startTime: "09:00", endTime: "09:30", available: 3, capacity: 3 },
-  { startTime: "09:30", endTime: "10:00", available: 2, capacity: 3 },
-  { startTime: "10:00", endTime: "10:30", available: 0, capacity: 3 },
-  { startTime: "10:30", endTime: "11:00", available: 1, capacity: 3 },
-  { startTime: "11:00", endTime: "11:30", available: 3, capacity: 3 },
+export const mockSlots: AvailableSlot[] = [
+  { start: "2026-06-10T09:00:00+01:00", end: "2026-06-10T09:45:00+01:00" },
+  { start: "2026-06-10T09:45:00+01:00", end: "2026-06-10T10:30:00+01:00" },
+  { start: "2026-06-10T10:30:00+01:00", end: "2026-06-10T11:15:00+01:00" },
+  { start: "2026-06-10T11:15:00+01:00", end: "2026-06-10T12:00:00+01:00" },
 ];
 
-export const mockBusinessDays: BusinessDay[] = [1, 2, 3, 4, 5, 6, 0].map(
-  (weekday, i) => ({
-    id: `bd_${i}`,
-    shopId: "shop_1",
+export const mockBusinessDays: BusinessDay[] = [0, 1, 2, 3, 4, 5, 6].map(
+  (weekday) => ({
+    id: `bd-${weekday}`,
+    shop_id: mockShop.id,
     weekday,
-    isOpen: weekday !== 0,
-    openTime: "09:00",
-    closeTime: "18:00",
+    is_active: weekday !== 0,
+    open_time: "09:00",
+    close_time: "18:00",
   }),
 );
 
 export const mockBookingCode = "BK-TEST-1234";
+export const mockPaymentReference = "ref_test_123";
 
-export const mockBooking: Booking = {
-  id: "bk_1",
-  code: mockBookingCode,
-  shopId: "shop_1",
-  serviceId: "svc_1",
-  service: {
-    id: "svc_1",
-    name: "Skin Fade",
-    durationMinutes: 45,
-    priceKobo: 500000,
+export const mockInitiateResult: InitiateResult = {
+  booking: {
+    id: "bk-1",
+    code: mockBookingCode,
+    shop_id: mockShop.id,
+    service_id: "svc-1",
+    customer_name: "John Doe",
+    customer_email: "john@example.com",
+    status: "pending_payment",
+    starts_at: "2026-06-10T09:00:00+01:00",
+    ends_at: "2026-06-10T09:45:00+01:00",
+    payment_reference: mockPaymentReference,
   },
-  date: "2026-06-10",
-  startTime: "09:30",
-  endTime: "10:15",
-  status: "confirmed",
-  paymentStatus: "paid",
-  amountKobo: 500000,
-  customer: {
-    name: "John Doe",
-    email: "john@example.com",
-    phone: "+2348000000000",
+  payment: {
+    id: "pay-1",
+    booking_id: "bk-1",
+    reference: mockPaymentReference,
+    amount_kobo: 500000,
+    status: "pending",
+    channel: "card",
   },
-  notes: "Please prepare a low fade",
-  createdAt: "2026-06-07T10:00:00Z",
+  authorization_url: "https://checkout.paystack.com/test-checkout",
+  access_code: "access_test",
 };
 
-export const mockBookingsList: Booking[] = [
-  mockBooking,
+export const mockBookingItem: BookingListItem = {
+  ...mockInitiateResult.booking,
+  status: "confirmed",
+  service_name: "Skin Fade",
+  amount_kobo: 500000,
+  payment_status: "success",
+};
+
+export const mockBookingsList: BookingListItem[] = [
+  mockBookingItem,
   {
-    ...mockBooking,
-    id: "bk_2",
+    ...mockBookingItem,
+    id: "bk-2",
     code: "BK-TEST-5678",
-    startTime: "11:00",
-    customer: { name: "Ada Obi", email: "ada@example.com", phone: "+2348111111111" },
-    notes: undefined,
+    customer_name: "Ada Obi",
+    customer_email: "ada@example.com",
+    status: "pending_payment",
+    payment_status: "pending",
   },
 ];
 
-export const mockSession: AuthSession = {
-  accessToken: "test-access-token",
-  refreshToken: "test-refresh-token",
-  expiresIn: 3600,
-  user: {
-    id: "user_1",
-    fullName: "Sam Barber",
-    email: "sam@example.com",
-    role: "owner",
-    emailVerified: true,
-  },
-};
-
 export const mockAnalytics: AnalyticsSummary = {
-  totalRevenueKobo: 4500000,
-  totalBookings: 42,
-  completedBookings: 31,
-  cancelledBookings: 5,
-  noShowBookings: 2,
-  upcomingBookings: 4,
-  occupancyRate: 0.72,
-  revenueSeries: Array.from({ length: 14 }, (_, i) => ({
+  total_revenue_kobo: 4500000,
+  total_bookings: 42,
+  confirmed_bookings: 31,
+  cancelled_bookings: 5,
+  expired_bookings: 2,
+  revenue_series: Array.from({ length: 14 }, (_, i) => ({
     date: `2026-05-${String(i + 1).padStart(2, "0")}`,
-    revenueKobo: 200000 + i * 25000,
+    revenue_kobo: 200000 + i * 25000,
     bookings: 2 + (i % 4),
   })),
-  topServices: [
-    { serviceId: "svc_1", name: "Skin Fade", bookings: 20, revenueKobo: 10000000 },
-    { serviceId: "svc_2", name: "Beard Trim", bookings: 12, revenueKobo: 3000000 },
+  top_services: [
+    { service_id: "svc-1", name: "Skin Fade", bookings: 20, revenue_kobo: 10000000 },
+    { service_id: "svc-2", name: "Beard Trim", bookings: 12, revenue_kobo: 3000000 },
   ],
+};
+
+export const mockSession: AuthResult = {
+  user: {
+    id: mockShop.owner_id,
+    email: "sam@example.com",
+    phone: "+2348012345678",
+    role: "owner",
+    email_verified: false,
+  },
+  tokens: {
+    access_token: "test-access-token",
+    refresh_token: "test-refresh-token",
+    refresh_expires_at: "2026-07-10T09:00:00Z",
+  },
 };

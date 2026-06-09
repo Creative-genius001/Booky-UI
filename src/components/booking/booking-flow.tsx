@@ -22,7 +22,7 @@ import { DetailsStep } from "@/components/booking/steps/details-step";
 import { PaymentStep } from "@/components/booking/steps/payment-step";
 import { BookingFlowSkeleton } from "@/components/booking/booking-skeleton";
 import { ShopNotFound } from "@/components/booking/shop-not-found";
-import { formatKobo } from "@/lib/utils";
+import { formatNaira } from "@/lib/utils";
 
 const STEP_TITLES: Record<BookingStep, string> = {
   service: "Choose a service",
@@ -87,7 +87,6 @@ export function BookingFlow({ slug }: { slug: string }) {
 
   return (
     <div className="min-h-dvh pb-28 lg:pb-0">
-      {/* Top bar */}
       <header className="sticky top-0 z-30 border-b border-border/70 bg-background/85 backdrop-blur">
         <div className="container flex h-14 items-center justify-between">
           <Logo size="sm" />
@@ -101,7 +100,6 @@ export function BookingFlow({ slug }: { slug: string }) {
         <ShopHero shop={shop} />
 
         <div className="mt-6 lg:grid lg:grid-cols-[1fr_340px] lg:gap-8">
-          {/* Main column */}
           <div>
             <div className="mb-5">
               <Stepper
@@ -130,24 +128,19 @@ export function BookingFlow({ slug }: { slug: string }) {
                   )}
                   {active === "date" && <DateStep onNext={next} />}
                   {active === "time" && (
-                    <TimeStep shopId={shop.id} onNext={next} />
+                    <TimeStep shopSlug={shop.slug} onNext={next} />
                   )}
                   {active === "details" && (
                     <DetailsStep formId={DETAILS_FORM_ID} onValid={next} />
                   )}
                   {active === "payment" && (
-                    <PaymentStep
-                      shopId={shop.id}
-                      slug={slug}
-                      onEditDetails={() => goTo("details")}
-                    />
+                    <PaymentStep onEditDetails={() => goTo("details")} />
                   )}
                 </motion.div>
               </AnimatePresence>
             </div>
           </div>
 
-          {/* Desktop summary sidebar */}
           <aside className="hidden lg:block">
             <div className="sticky top-20">
               <Card>
@@ -179,7 +172,6 @@ export function BookingFlow({ slug }: { slug: string }) {
         </div>
       </div>
 
-      {/* Mobile sticky footer */}
       {showFooter && (
         <MobileFooter
           active={active}
@@ -188,7 +180,7 @@ export function BookingFlow({ slug }: { slug: string }) {
           onContinue={next}
           isFirst={activeIndex === 0}
           detailsFormId={DETAILS_FORM_ID}
-          priceKobo={service?.priceKobo}
+          priceNaira={service?.price}
         />
       )}
     </div>
@@ -237,7 +229,7 @@ function MobileFooter({
   onContinue,
   isFirst,
   detailsFormId,
-  priceKobo,
+  priceNaira,
 }: {
   active: BookingStep;
   canContinue: boolean;
@@ -245,7 +237,7 @@ function MobileFooter({
   onContinue: () => void;
   isFirst: boolean;
   detailsFormId: string;
-  priceKobo?: number;
+  priceNaira?: number;
 }) {
   return (
     <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/95 backdrop-blur safe-bottom lg:hidden">
@@ -262,10 +254,10 @@ function MobileFooter({
           </Button>
         )}
         <div className="flex flex-1 items-center gap-3">
-          {priceKobo != null && (
+          {priceNaira != null && (
             <div className="flex flex-col leading-tight">
               <span className="text-[11px] text-muted-foreground">Total</span>
-              <span className="text-sm font-bold">{formatKobo(priceKobo)}</span>
+              <span className="text-sm font-bold">{formatNaira(priceNaira)}</span>
             </div>
           )}
           {active === "details" ? (

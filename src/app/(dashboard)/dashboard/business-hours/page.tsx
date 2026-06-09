@@ -1,18 +1,38 @@
 "use client";
 
 import { useActiveShop } from "@/hooks/use-active-shop";
-import { useBusinessDays, useUpsertBusinessDays } from "@/hooks/use-shop-admin";
+import {
+  useBusinessDays,
+  usePatchBusinessDay,
+  useUpsertSchedule,
+} from "@/hooks/use-shop-admin";
 import { PageHeader } from "@/components/dashboard/page-header";
 import {
   BusinessHoursEditor,
-  toEditorDays,
+  type DayChange,
 } from "@/components/shop/business-hours-editor";
+import { ScheduleEditor } from "@/components/shop/schedule-editor";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function BusinessHoursPage() {
   const { shopId } = useActiveShop();
-  const { data, isLoading } = useBusinessDays(shopId ?? undefined);
-  const upsert = useUpsertBusinessDays(shopId ?? "");
+  const { data: days, isLoading } = useBusinessDays(shopId ?? undefined);
+  const patchDay = usePatchBusinessDay(shopId ?? "");
+  const upsert = useUpsertSchedule(shopId ?? "");
+
+  async function saveChanges(changed: DayChange[]) {
+    // Persist each edited day independently via PATCH.
+    for (const c of changed) {
+      await patchDay.mutateAsync({
+        dayId: c.id,
+        input: {
+          is_active: c.is_active,
+          open_time: c.open_time,
+          close_time: c.close_time,
+        },
+      });
+    }
+  }
 
   return (
     <div>
@@ -23,13 +43,17 @@ export default function BusinessHoursPage() {
 
       {isLoading ? (
         <Skeleton className="h-[420px] w-full rounded-xl" />
-      ) : (
+      ) : days && days.length > 0 ? (
         <BusinessHoursEditor
-          // Re-mount when the loaded data changes so the editor seeds correctly.
-          key={data ? "loaded" : "default"}
-          initial={toEditorDays(data)}
+          days={days}
+          saving={patchDay.isPending}
+          onSave={saveChanges}
+        />
+      ) : (
+        <ScheduleEditor
           saving={upsert.isPending}
-          onSave={(days) => upsert.mutate(days)}
+          saveLabel="Set hours"
+          onSave={(payload) => upsert.mutate(payload)}
         />
       )}
     </div>

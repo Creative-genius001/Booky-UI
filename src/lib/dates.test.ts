@@ -5,6 +5,8 @@ import {
   friendlyDate,
   isPastDate,
   bookingWindow,
+  isoClock,
+  isoDatePart,
 } from "@/lib/dates";
 
 describe("dates", () => {
@@ -44,5 +46,15 @@ describe("dates", () => {
 
   it("bookingWindow falls back to a sane default", () => {
     expect(bookingWindow(0)).toHaveLength(14);
+  });
+
+  it("isoClock extracts shop-local HH:mm without timezone conversion", () => {
+    expect(isoClock("2026-06-10T09:00:00+01:00")).toBe("09:00");
+    expect(isoClock("2026-06-10T14:30:00Z")).toBe("14:30");
+    expect(isoClock("not-a-date")).toBe("");
+  });
+
+  it("isoDatePart extracts the date portion", () => {
+    expect(isoDatePart("2026-06-10T09:00:00+01:00")).toBe("2026-06-10");
   });
 });

@@ -3,16 +3,23 @@
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowRight, Link2 } from "lucide-react";
+import { ArrowRight, Link2, Mail, Phone } from "lucide-react";
 import { createShopSchema, type CreateShopForm } from "@/lib/validation";
 import { useCreateShop } from "@/hooks/use-shop-admin";
 import { useShopStore } from "@/stores/shop-store";
-import { config } from "@/lib/config";
+import { config, TIMEZONES } from "@/lib/config";
 import { OnboardingProgress } from "@/components/onboarding/onboarding-progress";
+import { AddressAutocomplete } from "@/components/shop/address-autocomplete";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 function slugify(value: string) {
   return value
@@ -21,7 +28,7 @@ function slugify(value: string) {
     .replace(/[^a-z0-9\s-]/g, "")
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-")
-    .slice(0, 40);
+    .slice(0, 180);
 }
 
 export default function OnboardingShopPage() {
@@ -40,18 +47,17 @@ export default function OnboardingShopPage() {
     defaultValues: {
       name: "",
       slug: "",
+      email: "",
       phone: "",
-      address: "",
-      description: "",
-      logoUrl: "",
-      coverImageUrl: "",
+      timezone: "Africa/Lagos",
     },
   });
 
   const slug = watch("slug");
+  const timezone = watch("timezone");
+  const address = watch("address");
 
   function onName(e: React.ChangeEvent<HTMLInputElement>) {
-    // Auto-fill slug from name until the user edits the slug manually.
     if (!dirtyFields.slug) setValue("slug", slugify(e.target.value));
   }
 
@@ -59,16 +65,17 @@ export default function OnboardingShopPage() {
     createShop.mutate(
       {
         name: values.name,
-        slug: values.slug,
-        phone: values.phone || undefined,
+        slug: values.slug || undefined,
+        email: values.email,
+        phone: values.phone,
+        timezone: values.timezone,
         address: values.address || undefined,
-        description: values.description || undefined,
-        logoUrl: values.logoUrl || undefined,
-        coverImageUrl: values.coverImageUrl || undefined,
+        latitude: values.latitude,
+        longitude: values.longitude,
       },
       {
         onSuccess: (shop) => {
-          setActiveShop(shop.id);
+          setActiveShop(shop.id, shop.slug);
           router.push("/onboarding/booking-config");
         },
       },
@@ -103,7 +110,6 @@ export default function OnboardingShopPage() {
         <FormField
           label="Booking link"
           htmlFor="slug"
-          required
           error={errors.slug?.message}
           hint={
             !errors.slug
@@ -121,55 +127,71 @@ export default function OnboardingShopPage() {
         </FormField>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <FormField label="Phone" htmlFor="phone" error={errors.phone?.message}>
+          <FormField label="Email" htmlFor="email" required error={errors.email?.message}>
+            <Input
+              id="email"
+              type="email"
+              placeholder="shop@example.com"
+              leftIcon={<Mail />}
+              invalid={!!errors.email}
+              {...register("email")}
+            />
+          </FormField>
+          <FormField label="Phone" htmlFor="phone" required error={errors.phone?.message}>
             <Input
               id="phone"
               type="tel"
               placeholder="+234 800 000 0000"
+              leftIcon={<Phone />}
+              invalid={!!errors.phone}
               {...register("phone")}
             />
-          </FormField>
-          <FormField
-            label="Address"
-            htmlFor="address"
-            error={errors.address?.message}
-          >
-            <Input id="address" placeholder="12 Marina Rd, Lagos" {...register("address")} />
           </FormField>
         </div>
 
         <FormField
-          label="Description"
-          htmlFor="description"
-          error={errors.description?.message}
+          label="Address"
+          htmlFor="address"
+          error={errors.address?.message}
+          hint="Helps customers find you on the map. Pick a suggestion to set your location."
         >
-          <Textarea
-            id="description"
-            placeholder="A premium grooming experience in the heart of the city."
-            {...register("description")}
+          <AddressAutocomplete
+            id="address"
+            value={address ?? ""}
+            invalid={!!errors.address}
+            placeholder="12 Marina Rd, Lagos"
+            onChange={(v) => setValue("address", v)}
+            onSelect={({ address: a, latitude, longitude }) => {
+              setValue("address", a);
+              setValue("latitude", latitude);
+              setValue("longitude", longitude);
+            }}
           />
         </FormField>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <FormField
-            label="Logo URL"
-            htmlFor="logoUrl"
-            error={errors.logoUrl?.message}
+        <FormField
+          label="Timezone"
+          htmlFor="timezone"
+          required
+          error={errors.timezone?.message}
+          hint="Used to schedule slots and business hours."
+        >
+          <Select
+            value={timezone}
+            onValueChange={(v) => setValue("timezone", v, { shouldValidate: true })}
           >
-            <Input id="logoUrl" placeholder="https://…" {...register("logoUrl")} />
-          </FormField>
-          <FormField
-            label="Cover image URL"
-            htmlFor="coverImageUrl"
-            error={errors.coverImageUrl?.message}
-          >
-            <Input
-              id="coverImageUrl"
-              placeholder="https://…"
-              {...register("coverImageUrl")}
-            />
-          </FormField>
-        </div>
+            <SelectTrigger id="timezone" invalid={!!errors.timezone}>
+              <SelectValue placeholder="Select a timezone" />
+            </SelectTrigger>
+            <SelectContent>
+              {TIMEZONES.map((tz) => (
+                <SelectItem key={tz} value={tz}>
+                  {tz}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FormField>
 
         <Button
           type="submit"

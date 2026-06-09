@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { GeistSans } from "geist/font/sans";
 import { Toaster } from "sonner";
 import { Providers } from "./providers";
+import { RegisterSW } from "@/components/system/register-sw";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -12,6 +13,8 @@ export const metadata: Metadata = {
   description:
     "Bookly is a mobile-first booking platform for barbershops. Pick a service, choose a time, pay and you're booked.",
   applicationName: "Bookly",
+  appleWebApp: { capable: true, title: "Bookly", statusBarStyle: "default" },
+  manifest: "/manifest.webmanifest",
 };
 
 export const viewport: Viewport = {
@@ -28,6 +31,7 @@ export default function RootLayout({
     <html lang="en" className={GeistSans.variable} suppressHydrationWarning>
       <body className="min-h-dvh font-sans">
         <Providers>{children}</Providers>
+        <RegisterSW />
         <Toaster
           position="top-center"
           richColors

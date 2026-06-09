@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { http, HttpResponse } from "msw";
 import { server } from "@/test/server";
 import { api, ApiError } from "@/lib/api/client";
@@ -6,18 +6,27 @@ import { tokenStore } from "@/lib/api/token-store";
 
 const BASE = "http://localhost:8080";
 
+/** Backend success envelope helper. */
+const data = (payload: unknown) => HttpResponse.json({ data: payload });
+
 describe("api client", () => {
   beforeEach(() => {
     tokenStore.clear();
   });
 
+  it("unwraps the { data } success envelope", async () => {
+    server.use(http.get(`${BASE}/thing`, () => data({ hello: "world" })));
+    const result = await api.get<{ hello: string }>("/thing", { auth: false });
+    expect(result).toEqual({ hello: "world" });
+  });
+
   it("attaches the bearer token to authed requests", async () => {
-    tokenStore.set({ accessToken: "abc", refreshToken: "r" });
+    tokenStore.set({ access_token: "abc", refresh_token: "r" });
     let seen: string | null = null;
     server.use(
       http.get(`${BASE}/protected`, ({ request }) => {
         seen = request.headers.get("Authorization");
-        return HttpResponse.json({ ok: true });
+        return data({ ok: true });
       }),
     );
     await api.get("/protected");
@@ -25,41 +34,42 @@ describe("api client", () => {
   });
 
   it("refreshes once on 401 then retries the original request", async () => {
-    tokenStore.set({ accessToken: "stale", refreshToken: "good-refresh" });
+    tokenStore.set({ access_token: "stale", refresh_token: "good-refresh" });
     let refreshCalls = 0;
 
     server.use(
       http.get(`${BASE}/secure`, ({ request }) => {
         const auth = request.headers.get("Authorization");
-        // Old token → 401; refreshed token → 200.
-        if (auth === "Bearer refreshed-access-token") {
-          return HttpResponse.json({ data: "secret" });
-        }
-        return HttpResponse.json({ message: "expired" }, { status: 401 });
+        if (auth === "Bearer refreshed-access-token") return data({ secret: 1 });
+        return HttpResponse.json({ error: "expired", code: 401 }, { status: 401 });
       }),
       http.post(`${BASE}/auth/refresh`, () => {
         refreshCalls += 1;
-        return HttpResponse.json({
-          accessToken: "refreshed-access-token",
-          refreshToken: "good-refresh",
+        // Backend returns { data: { user, tokens } }.
+        return data({
+          user: { id: "u", email: "e", phone: "p", role: "owner" },
+          tokens: {
+            access_token: "refreshed-access-token",
+            refresh_token: "good-refresh",
+          },
         });
       }),
     );
 
-    const result = await api.get<{ data: string }>("/secure");
-    expect(result.data).toBe("secret");
+    const result = await api.get<{ secret: number }>("/secure");
+    expect(result.secret).toBe(1);
     expect(refreshCalls).toBe(1);
-    expect(tokenStore.get()?.accessToken).toBe("refreshed-access-token");
+    expect(tokenStore.get()?.access_token).toBe("refreshed-access-token");
   });
 
   it("clears tokens and throws when refresh fails", async () => {
-    tokenStore.set({ accessToken: "stale", refreshToken: "bad" });
+    tokenStore.set({ access_token: "stale", refresh_token: "bad" });
     server.use(
       http.get(`${BASE}/secure`, () =>
-        HttpResponse.json({ message: "expired" }, { status: 401 }),
+        HttpResponse.json({ error: "expired", code: 401 }, { status: 401 }),
       ),
       http.post(`${BASE}/auth/refresh`, () =>
-        HttpResponse.json({ message: "nope" }, { status: 401 }),
+        HttpResponse.json({ error: "nope", code: 401 }, { status: 401 }),
       ),
     );
 
@@ -67,10 +77,10 @@ describe("api client", () => {
     expect(tokenStore.get()).toBeNull();
   });
 
-  it("parses error envelopes into ApiError with status and message", async () => {
+  it("parses the { error, code } envelope into ApiError", async () => {
     server.use(
       http.get(`${BASE}/bad`, () =>
-        HttpResponse.json({ message: "Bad thing" }, { status: 422 }),
+        HttpResponse.json({ error: "Bad thing", code: 422 }, { status: 422 }),
       ),
     );
     try {
@@ -84,24 +94,20 @@ describe("api client", () => {
   });
 
   it("dedupes concurrent refreshes into a single call", async () => {
-    tokenStore.set({ accessToken: "stale", refreshToken: "good" });
+    tokenStore.set({ access_token: "stale", refresh_token: "good" });
     let refreshCalls = 0;
+    const guard = (request: Request, payload: unknown) =>
+      request.headers.get("Authorization") === "Bearer refreshed-access-token"
+        ? data(payload)
+        : HttpResponse.json({ error: "x", code: 401 }, { status: 401 });
     server.use(
-      http.get(`${BASE}/a`, ({ request }) =>
-        request.headers.get("Authorization") === "Bearer refreshed-access-token"
-          ? HttpResponse.json({ ok: "a" })
-          : HttpResponse.json({ message: "x" }, { status: 401 }),
-      ),
-      http.get(`${BASE}/b`, ({ request }) =>
-        request.headers.get("Authorization") === "Bearer refreshed-access-token"
-          ? HttpResponse.json({ ok: "b" })
-          : HttpResponse.json({ message: "x" }, { status: 401 }),
-      ),
-      http.post(`${BASE}/auth/refresh`, async () => {
+      http.get(`${BASE}/a`, ({ request }) => guard(request, { ok: "a" })),
+      http.get(`${BASE}/b`, ({ request }) => guard(request, { ok: "b" })),
+      http.post(`${BASE}/auth/refresh`, () => {
         refreshCalls += 1;
-        return HttpResponse.json({
-          accessToken: "refreshed-access-token",
-          refreshToken: "good",
+        return data({
+          user: { id: "u", email: "e", phone: "p", role: "owner" },
+          tokens: { access_token: "refreshed-access-token", refresh_token: "good" },
         });
       }),
     );

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Mail, User } from "lucide-react";
+import { Mail, Phone } from "lucide-react";
 import { signupSchema, type SignupForm } from "@/lib/validation";
 import { useSignup } from "@/hooks/use-auth";
 import { FormField } from "@/components/ui/form-field";
@@ -19,12 +19,7 @@ export default function SignupPage() {
     formState: { errors },
   } = useForm<SignupForm>({
     resolver: zodResolver(signupSchema),
-    defaultValues: {
-      fullName: "",
-      email: "",
-      password: "",
-      confirmPassword: "",
-    },
+    defaultValues: { email: "", phone: "", password: "", confirmPassword: "" },
   });
 
   return (
@@ -38,30 +33,11 @@ export default function SignupPage() {
 
       <form
         onSubmit={handleSubmit((v) =>
-          signup.mutate({
-            fullName: v.fullName,
-            email: v.email,
-            password: v.password,
-          }),
+          signup.mutate({ email: v.email, phone: v.phone, password: v.password }),
         )}
         className="space-y-4"
         noValidate
       >
-        <FormField
-          label="Full name"
-          htmlFor="fullName"
-          error={errors.fullName?.message}
-        >
-          <Input
-            id="fullName"
-            autoComplete="name"
-            placeholder="John Doe"
-            leftIcon={<User />}
-            invalid={!!errors.fullName}
-            {...register("fullName")}
-          />
-        </FormField>
-
         <FormField label="Email" htmlFor="email" error={errors.email?.message}>
           <Input
             id="email"
@@ -72,6 +48,19 @@ export default function SignupPage() {
             leftIcon={<Mail />}
             invalid={!!errors.email}
             {...register("email")}
+          />
+        </FormField>
+
+        <FormField label="Phone" htmlFor="phone" error={errors.phone?.message}>
+          <Input
+            id="phone"
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            placeholder="+234 800 000 0000"
+            leftIcon={<Phone />}
+            invalid={!!errors.phone}
+            {...register("phone")}
           />
         </FormField>
 

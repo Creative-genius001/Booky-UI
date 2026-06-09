@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import type { BusinessDayInput } from "@/lib/api/shops";
+import { useMemo, useState } from "react";
+import type { BusinessDay } from "@/types";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -19,100 +19,98 @@ const NAMES: Record<number, string> = {
   6: "Saturday",
 };
 
-const DEFAULT_OPEN = "09:00";
-const DEFAULT_CLOSE = "18:00";
-
-export function defaultBusinessDays(): BusinessDayInput[] {
-  return ORDER.map((weekday) => ({
-    weekday,
-    isOpen: weekday !== 0,
-    openTime: DEFAULT_OPEN,
-    closeTime: DEFAULT_CLOSE,
-  }));
+export interface DayChange {
+  id: string;
+  is_active: boolean;
+  open_time: string;
+  close_time: string;
 }
 
-/** Normalise/merge server days into the Mon→Sun ordered editor shape. */
-export function toEditorDays(
-  days?: { weekday: number; isOpen: boolean; openTime: string; closeTime: string }[],
-): BusinessDayInput[] {
-  const map = new Map(days?.map((d) => [d.weekday, d]));
-  return ORDER.map((weekday) => {
-    const d = map.get(weekday);
-    return {
-      weekday,
-      isOpen: d?.isOpen ?? weekday !== 0,
-      openTime: d?.openTime?.slice(0, 5) ?? DEFAULT_OPEN,
-      closeTime: d?.closeTime?.slice(0, 5) ?? DEFAULT_CLOSE,
-    };
-  });
-}
-
-interface Props {
-  initial?: BusinessDayInput[];
-  saving?: boolean;
-  saveLabel?: string;
-  onSave: (days: BusinessDayInput[]) => void;
-  footer?: React.ReactNode;
-}
-
+/**
+ * Dashboard per-day hours editor. Each day is a real BusinessDay row (with an
+ * id) so edits are saved via PATCH /shops/:id/business-days/:dayId. onSave
+ * receives only the rows that actually changed.
+ */
 export function BusinessHoursEditor({
-  initial,
+  days: initial,
   saving,
-  saveLabel = "Save changes",
   onSave,
-  footer,
-}: Props) {
-  const [days, setDays] = useState<BusinessDayInput[]>(
-    initial ?? defaultBusinessDays(),
-  );
+}: {
+  days: BusinessDay[];
+  saving?: boolean;
+  onSave: (changed: DayChange[]) => void;
+}) {
+  const ordered = useMemo(() => {
+    const map = new Map(initial.map((d) => [d.weekday, d]));
+    return ORDER.map((w) => map.get(w)).filter(Boolean) as BusinessDay[];
+  }, [initial]);
 
-  function patch(weekday: number, change: Partial<BusinessDayInput>) {
-    setDays((prev) =>
-      prev.map((d) => (d.weekday === weekday ? { ...d, ...change } : d)),
-    );
+  const [rows, setRows] = useState<BusinessDay[]>(ordered);
+
+  function patch(id: string, change: Partial<BusinessDay>) {
+    setRows((prev) => prev.map((d) => (d.id === id ? { ...d, ...change } : d)));
   }
 
-  const invalid = days.some(
-    (d) => d.isOpen && d.openTime >= d.closeTime,
-  );
+  const invalid = rows.some((d) => d.is_active && d.open_time >= d.close_time);
+
+  function save() {
+    const byId = new Map(initial.map((d) => [d.id, d]));
+    const changed: DayChange[] = rows
+      .filter((r) => {
+        const o = byId.get(r.id);
+        return (
+          o &&
+          (o.is_active !== r.is_active ||
+            o.open_time.slice(0, 5) !== r.open_time.slice(0, 5) ||
+            o.close_time.slice(0, 5) !== r.close_time.slice(0, 5))
+        );
+      })
+      .map((r) => ({
+        id: r.id,
+        is_active: r.is_active,
+        open_time: r.open_time.slice(0, 5),
+        close_time: r.close_time.slice(0, 5),
+      }));
+    onSave(changed);
+  }
 
   return (
     <div className="space-y-3">
       <div className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">
-        {days.map((d) => {
-          const badTimes = d.isOpen && d.openTime >= d.closeTime;
+        {rows.map((d) => {
+          const badTimes = d.is_active && d.open_time >= d.close_time;
           return (
             <div
-              key={d.weekday}
+              key={d.id}
               className={cn(
                 "flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between",
-                !d.isOpen && "bg-muted/30",
+                !d.is_active && "bg-muted/30",
               )}
             >
               <div className="flex items-center gap-3">
                 <Switch
-                  checked={d.isOpen}
-                  onCheckedChange={(v) => patch(d.weekday, { isOpen: v })}
+                  checked={d.is_active}
+                  onCheckedChange={(v) => patch(d.id, { is_active: v })}
                   aria-label={`${NAMES[d.weekday]} open`}
                 />
                 <span className="w-24 font-medium">{NAMES[d.weekday]}</span>
               </div>
-              {d.isOpen ? (
+              {d.is_active ? (
                 <div className="flex items-center gap-2">
                   <Input
                     type="time"
-                    value={d.openTime}
+                    value={d.open_time.slice(0, 5)}
                     invalid={badTimes}
-                    onChange={(e) => patch(d.weekday, { openTime: e.target.value })}
+                    onChange={(e) => patch(d.id, { open_time: e.target.value })}
                     className="w-32"
                     aria-label={`${NAMES[d.weekday]} opening time`}
                   />
                   <span className="text-muted-foreground">–</span>
                   <Input
                     type="time"
-                    value={d.closeTime}
+                    value={d.close_time.slice(0, 5)}
                     invalid={badTimes}
-                    onChange={(e) => patch(d.weekday, { closeTime: e.target.value })}
+                    onChange={(e) => patch(d.id, { close_time: e.target.value })}
                     className="w-32"
                     aria-label={`${NAMES[d.weekday]} closing time`}
                   />
@@ -131,15 +129,9 @@ export function BusinessHoursEditor({
         </p>
       )}
 
-      <div className="flex items-center gap-3">
-        {footer}
-        <Button
-          onClick={() => onSave(days)}
-          loading={saving}
-          disabled={invalid}
-          className="ml-auto"
-        >
-          {saveLabel}
+      <div className="flex justify-end">
+        <Button onClick={save} loading={saving} disabled={invalid}>
+          Save changes
         </Button>
       </div>
     </div>

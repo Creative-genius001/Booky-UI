@@ -1,30 +1,6 @@
 # Bookly — Frontend
 
-A production-ready, mobile-first booking frontend for barbershops, built to the
-**Bookly Frontend Master Spec v5** and wired to the `barber-booking-backend` Go
-API (`router.go`).
-
-It delivers the complete product: the **customer booking flow** (the headline
-experience), owner **authentication**, **mandatory onboarding**, and a full
-**dashboard** with all seven modules.
-
----
-
-## Tech stack
-
-| Concern        | Choice                                  |
-| -------------- | --------------------------------------- |
-| Framework      | Next.js 15 (App Router, RSC)            |
-| Language       | TypeScript (strict)                     |
-| Styling        | Tailwind CSS v3 + design tokens         |
-| UI primitives  | Hand-built shadcn-style + Radix UI      |
-| Data fetching  | TanStack React Query v5 (typed clients) |
-| Client state   | Zustand (persisted)                     |
-| Forms          | React Hook Form + Zod                   |
-| Animation      | Framer Motion                           |
-| Font           | Geist Sans                              |
-| Icons          | lucide-react                            |
-| Toasts         | sonner                                  |
+## A production-ready, mobile-first booking frontend for barbershops.
 
 ## Getting started
 
@@ -39,7 +15,7 @@ Scripts: `pnpm dev` · `pnpm build` · `pnpm start` · `pnpm typecheck` · `pnpm
 
 ### Environment
 
-| Variable                   | Description                                            |
+| Variable                   | Description                                           |
 | -------------------------- | ----------------------------------------------------- |
 | `NEXT_PUBLIC_API_BASE_URL` | Base URL of the Go backend (default `localhost:8080`) |
 | `NEXT_PUBLIC_APP_URL`      | Public URL of this app (Paystack callback URLs)       |
@@ -47,51 +23,32 @@ Scripts: `pnpm dev` · `pnpm build` · `pnpm start` · `pnpm typecheck` · `pnpm
 
 ## Key routes
 
-| Route                         | Purpose                                        |
-| ----------------------------- | ---------------------------------------------- |
-| `/`                           | Marketing landing page                         |
-| `/book/[shopSlug]`            | **Customer booking flow** (the core journey)   |
-| `/book/[shopSlug]/success`    | Payment result + polling confirmation          |
-| `/login` `/signup`            | Owner authentication                           |
-| `/verify-email`               | Email verification (post-signup & token link)  |
-| `/forgot-password` `/reset-password` | Password recovery                       |
-| `/onboarding/*`               | 3-step shop setup (shop → rules → hours)        |
-| `/dashboard`                  | Overview                                        |
-| `/dashboard/bookings`         | Bookings (Upcoming/Completed/Cancelled/No-show) + drawer |
-| `/dashboard/services`         | Services CRUD                                   |
-| `/dashboard/business-hours`   | Weekly hours editor                             |
-| `/dashboard/blocked-dates`    | Block/unblock dates                             |
-| `/dashboard/analytics`        | Revenue & booking analytics                     |
-| `/dashboard/settings`         | Shop, rules, Paystack, notifications, plan      |
-
-## The customer booking flow
-
-The headline experience, at `/book/[shopSlug]`. No account, no login, no barber
-selection — exactly as the spec requires:
-
-```
-Shop link → Service → Date → Time → Details → Payment → Success
-```
-
-- **Capacity-based slots** come from `GET /shops/:id/availability`.
-- **Payment-first**: a booking is initiated (`POST /bookings/initiate`), then a
-  Paystack checkout is started (`POST /payments/init`) and the customer is
-  redirected. The success page polls `GET /bookings/:code` until the webhook
-  confirms payment.
-- Progress is **persisted** (Zustand + localStorage), so a customer returning
-  from Paystack keeps their place.
-- Fully responsive: sticky bottom CTA on mobile, summary sidebar on desktop,
-  animated step transitions, skeletons and graceful empty/error states.
+| Route                                | Purpose                                                              |
+| ------------------------------------ | -------------------------------------------------------------------- |
+| `/`                                  | Marketing landing page                                               |
+| `/book/[shopSlug]`                   | **Customer booking flow** (the core journey)                         |
+| `/payment/callback`                  | Paystack return URL — polls `GET /bookings/:code` for live status    |
+| `/login` `/signup`                   | Owner authentication                                                 |
+| `/forgot-password` `/reset-password` | Password recovery (real BE endpoints)                                |
+| `/onboarding/*`                      | 3-step shop setup (shop → capacity → hours)                          |
+| `/dashboard`                         | Overview                                                             |
+| `/dashboard/bookings`                | Bookings list with **search + pagination** + read-only detail drawer |
+| `/dashboard/services`                | Services CRUD                                                        |
+| `/dashboard/business-hours`          | Weekly hours editor                                                  |
+| `/dashboard/blocked-dates`           | Block/unblock dates                                                  |
+| `/dashboard/analytics`               | Revenue & booking analytics                                          |
+| `/dashboard/settings`                | Shop info, capacity, visibility, payments                            |
 
 ## Project structure
 
 ```
 src/
   app/
-    (auth)/            login, signup, verify-email, forgot/reset
+    (auth)/            login, signup
     (onboarding)/      onboarding/shop, booking-config, business-hours
     (dashboard)/       dashboard + 7 modules
-    book/[shopSlug]/   customer booking flow + success
+    book/[shopSlug]/   customer booking flow
+    payment/callback/  Paystack return + status polling
     page.tsx           landing
   components/
     ui/                design-system primitives (button, input, sheet, …)
@@ -109,55 +66,45 @@ src/
   types/               shared domain types
 ```
 
-## Design system
+## Performance & PWA
 
-Brand tokens from the spec, as CSS variables in `src/app/globals.css`:
+Speed optimizations applied:
 
-- Primary `#E05A29` · Background `#F2ECEC` · Ink `#132436` · Accent `#9C90FC`
-- Soft rounded corners, elevated cards, premium SaaS feel, Geist Sans throughout.
+- `optimizePackageImports` tree-shakes `lucide-react` + `date-fns`; `compress`,
+  `poweredByHeader: false`, and production source maps off.
+- The analytics SVG chart is **lazy-loaded** (`next/dynamic`, no SSR) so it's off
+  the dashboard's critical path.
+- React Query `staleTime` tuned for rarely-changing public data (shop 5 min,
+  services 60 s, availability 15 s) to cut refetches; the backend also sends
+  `Cache-Control` on public reads.
+- Avatars use a lightweight lazy `<img>` (the API exposes no image URLs yet — see
+  the images epic; `next/image` returns when real images land).
+- App is well code-split per route (shared JS ~106 kB; `/book` ~223 kB incl.
+  Framer Motion, which is the largest remaining chunk and a lazy-load candidate).
 
-## Auth & token handling
+**PWA & icons:** installable with a web manifest (`app/manifest.ts`) and a full
+icon set generated from the brand mark — `app/icon.svg` (modern SVG favicon),
+`app/favicon.ico` (multi-res 16/32/48 for legacy browsers & crawlers),
+`app/apple-icon.png` (iOS), and `public/icon-192/512` + maskable for install.
+A production-only service worker (`public/sw.js`) does app-shell caching with an
+`/offline` fallback (not registered in dev or under e2e). Regenerate all icons
+with `pnpm generate-icons`.
 
-- Tokens live in `localStorage` via a framework-agnostic `tokenStore`.
-- The HTTP client auto-attaches the bearer token and transparently refreshes on
-  `401` via `POST /auth/refresh` (deduped), retrying the original request once.
-- Owner routes (`/onboarding`, `/dashboard`) are guarded client-side by
-  `RequireAuth` (tokens aren't readable by middleware).
-
-## API assumptions
-
-Backend handler payloads weren't available at build time, so request/response
-**shapes were inferred** from `router.go`, the spec and conventional Go/JSON
-design. They are centralised so you can adjust them in one place:
-
-- **Types**: `src/types/index.ts`
-- **Endpoints**: `src/lib/api/*.ts`
-
-Notable assumptions:
-
-- `GET /shops/:id` resolves **either an id or a slug** (the customer flow uses a slug).
-- Money is stored in **kobo** (`amountKobo`, `priceKobo`); the UI captures Naira
-  and converts.
-- `POST /bookings/initiate` returns `{ booking, payment? }`; if `payment` is
-  absent the app calls `POST /payments/init` with the booking code.
-- Endpoints used but **not yet present** in `router.go` (clearly marked in code):
-  `/auth/me`, `/auth/verify-email`, `/auth/resend-verification`,
-  `/auth/forgot-password`, `/auth/reset-password`, `GET /bookings`,
-  `GET /bookings/:code`, `PATCH /bookings/:id`, `GET /shops/:id/analytics`.
-  Each lives behind a typed client function — wire or rename in one spot.
-- The owner's active shop id is remembered locally (`shop-store`) since the API
-  exposes no "list my shops" endpoint. Swap for `/shops/me` if it lands.
+> Note: Lighthouse/Core-Web-Vitals were not run in this environment; the above are
+> best-practice optimizations + bundle analysis. Run `lighthouse` against a
+> production build before launch.
 
 ## Testing
 
 A full test pyramid, all backend calls mocked with **MSW** (one set of handlers
-+ fixtures shared across every layer — `src/test/`).
 
-| Layer            | Tool                          | What it covers                                                                 |
-| ---------------- | ----------------------------- | ------------------------------------------------------------------------------ |
-| Unit             | Vitest                        | money/date/duration formatting, Zod schemas, booking-store reducer logic, and the API client's 401-refresh + dedup behaviour |
-| Component        | Vitest + React Testing Library| service-step (loading/empty/error/select), details-step validation & store sync, stepper navigation, status badges |
-| End-to-end       | Playwright (Chromium + mobile)| the full customer journey (shop → service → date → time → details → pay → success) and owner login/validation |
+- fixtures shared across every layer — `src/test/`).
+
+| Layer      | Tool                           | What it covers                                                                                                               |
+| ---------- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| Unit       | Vitest                         | money/date/duration formatting, Zod schemas, booking-store reducer logic, and the API client's 401-refresh + dedup behaviour |
+| Component  | Vitest + React Testing Library | service-step (loading/empty/error/select), details-step validation & store sync, stepper navigation, status badges           |
+| End-to-end | Playwright (Chromium + mobile) | the full customer journey (shop → service → date → time → details → pay → success) and owner login/validation                |
 
 ```bash
 pnpm test          # unit + component (Vitest, jsdom)
@@ -174,7 +121,8 @@ pnpm test:e2e:ui   # Playwright UI mode
   bundle. The payments mock echoes the app's Paystack callback URL back, so the
   checkout redirect lands on the real in-app success page — no real Paystack or
   backend needed.
-- Current status: **47 unit/component tests + 5 e2e specs, all green.**
+- Current status: **57 unit/component tests + 6 e2e specs, all green** against
+  the real backend contract.
 
 > First e2e run downloads the Chromium build: `npx playwright install chromium`.
 

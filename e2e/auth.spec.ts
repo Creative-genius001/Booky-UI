@@ -31,4 +31,19 @@ test.describe("Owner authentication", () => {
       page.getByRole("heading", { name: /create your account/i }),
     ).toBeVisible();
   });
+
+  test("requests a password reset link", async ({ page }) => {
+    await page.goto("/login");
+    await page.getByRole("link", { name: /forgot password/i }).click();
+    await expect(
+      page.getByRole("heading", { name: /forgot password/i }),
+    ).toBeVisible();
+
+    await page.getByLabel("Email", { exact: true }).fill("sam@example.com");
+    await page.getByRole("button", { name: /send reset link/i }).click();
+
+    await expect(
+      page.getByRole("heading", { name: /check your email/i }),
+    ).toBeVisible();
+  });
 });

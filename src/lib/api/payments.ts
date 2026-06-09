@@ -1,8 +1,16 @@
 import { api } from "@/lib/api/client";
-import type { PaymentInitRequest, PaymentInitResponse } from "@/types";
+import type { InitiateResult } from "@/types";
+
+export interface PaymentInitPayload {
+  booking_code: string;
+  payment_reference: string;
+}
 
 export const paymentsApi = {
-  /** Router: POST /payments/init -> Paystack authorization URL. */
-  init: (payload: PaymentInitRequest) =>
-    api.post<PaymentInitResponse>("/payments/init", payload, { auth: false }),
+  /**
+   * POST /payments/init — re-initialises payment for an existing pending
+   * booking and returns a fresh Paystack authorization URL.
+   */
+  init: (payload: PaymentInitPayload) =>
+    api.post<InitiateResult>("/payments/init", payload, { auth: false }),
 };

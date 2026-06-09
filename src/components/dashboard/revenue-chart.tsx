@@ -3,29 +3,24 @@
 import { useMemo, useState } from "react";
 import { format, parseISO } from "date-fns";
 import { formatKobo } from "@/lib/utils";
-
-interface Point {
-  date: string;
-  revenueKobo: number;
-  bookings: number;
-}
+import type { RevenuePoint } from "@/types";
 
 /** Minimal dependency-free area chart for the revenue trend. */
-export function RevenueChart({ data }: { data: Point[] }) {
+export function RevenueChart({ data }: { data: RevenuePoint[] }) {
   const [hover, setHover] = useState<number | null>(null);
   const width = 560;
   const height = 220;
   const pad = useMemo(() => ({ top: 16, right: 8, bottom: 24, left: 8 }), []);
 
   const { path, area, points, max } = useMemo(() => {
-    const max = Math.max(1, ...data.map((d) => d.revenueKobo));
+    const max = Math.max(1, ...data.map((d) => d.revenue_kobo));
     const innerW = width - pad.left - pad.right;
     const innerH = height - pad.top - pad.bottom;
     const step = data.length > 1 ? innerW / (data.length - 1) : innerW;
 
     const points = data.map((d, i) => ({
       x: pad.left + i * step,
-      y: pad.top + innerH - (d.revenueKobo / max) * innerH,
+      y: pad.top + innerH - (d.revenue_kobo / max) * innerH,
       d,
     }));
 
@@ -91,7 +86,7 @@ export function RevenueChart({ data }: { data: Point[] }) {
         {hover != null ? (
           <span className="font-medium text-foreground">
             {format(parseISO(data[hover].date), "d MMM")} ·{" "}
-            {formatKobo(data[hover].revenueKobo)}
+            {formatKobo(data[hover].revenue_kobo)}
           </span>
         ) : (
           <span>Peak {formatKobo(max)}</span>

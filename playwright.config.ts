@@ -12,12 +12,19 @@ export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  // One local retry absorbs Next dev's first-hit route compilation under
+  // parallel workers (the route is compiled by the retry). CI gets 2.
+  retries: process.env.CI ? 2 : 1,
   workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI ? "github" : "list",
+  // `next dev` compiles routes on first hit; give cold-route navigations and
+  // assertions room so parallel workers don't trip over lazy compilation.
+  expect: { timeout: 10_000 },
   use: {
     baseURL: BASE_URL,
     trace: "on-first-retry",
+    navigationTimeout: 30_000,
+    actionTimeout: 15_000,
   },
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },

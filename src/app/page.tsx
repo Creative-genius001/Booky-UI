@@ -73,7 +73,7 @@ export default function Home() {
               </Link>
             </Button>
             <Button asChild size="xl" variant="outline">
-              <Link href="/book/demo-shop">View a demo booking</Link>
+              <Link href="/discover">Find a shop near you</Link>
             </Button>
           </div>
         </div>

@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { CustomerDetails, Service, Shop } from "@/types";
+import type { Service, Shop } from "@/types";
 
 export type BookingStep = "service" | "date" | "time" | "details" | "payment";
 
@@ -14,27 +14,31 @@ export const BOOKING_STEPS: BookingStep[] = [
   "payment",
 ];
 
+export interface CustomerDetails {
+  name: string;
+  email: string;
+}
+
 interface BookingState {
   shopSlug: string | null;
   shop: Shop | null;
   service: Service | null;
-  date: string | null; // YYYY-MM-DD
-  startTime: string | null; // HH:mm
+  date: string | null; // YYYY-MM-DD (the day being browsed)
+  /** RFC-3339 start time of the chosen slot (sent as start_time). */
+  startTime: string | null;
   customer: CustomerDetails;
-  notes: string;
 
   setShop: (slug: string, shop: Shop) => void;
   selectService: (service: Service) => void;
   selectDate: (date: string) => void;
-  selectTime: (time: string) => void;
+  selectTime: (startISO: string) => void;
   setCustomer: (customer: Partial<CustomerDetails>) => void;
-  setNotes: (notes: string) => void;
   reset: (slug?: string) => void;
   /** Highest step the user has enough data to view. */
   furthestStep: () => BookingStep;
 }
 
-const emptyCustomer: CustomerDetails = { name: "", email: "", phone: "" };
+const emptyCustomer: CustomerDetails = { name: "", email: "" };
 
 export const useBookingStore = create<BookingState>()(
   persist(
@@ -45,11 +49,9 @@ export const useBookingStore = create<BookingState>()(
       date: null,
       startTime: null,
       customer: emptyCustomer,
-      notes: "",
 
       setShop: (slug, shop) => {
         const current = get();
-        // Reset selections when switching to a different shop.
         if (current.shopSlug && current.shopSlug !== slug) {
           set({
             shopSlug: slug,
@@ -58,19 +60,16 @@ export const useBookingStore = create<BookingState>()(
             date: null,
             startTime: null,
             customer: emptyCustomer,
-            notes: "",
           });
         } else {
           set({ shopSlug: slug, shop });
         }
       },
-      selectService: (service) =>
-        set({ service, date: null, startTime: null }),
+      selectService: (service) => set({ service, date: null, startTime: null }),
       selectDate: (date) => set({ date, startTime: null }),
       selectTime: (startTime) => set({ startTime }),
       setCustomer: (customer) =>
         set((s) => ({ customer: { ...s.customer, ...customer } })),
-      setNotes: (notes) => set({ notes }),
       reset: (slug) =>
         set({
           shopSlug: slug ?? null,
@@ -78,7 +77,6 @@ export const useBookingStore = create<BookingState>()(
           date: null,
           startTime: null,
           customer: emptyCustomer,
-          notes: "",
         }),
       furthestStep: () => {
         const s = get();
@@ -86,7 +84,7 @@ export const useBookingStore = create<BookingState>()(
         if (!s.date) return "date";
         if (!s.startTime) return "time";
         const c = s.customer;
-        if (!c.name || !c.email || !c.phone) return "details";
+        if (!c.name || !c.email) return "details";
         return "payment";
       },
     }),
@@ -98,7 +96,6 @@ export const useBookingStore = create<BookingState>()(
         date: s.date,
         startTime: s.startTime,
         customer: s.customer,
-        notes: s.notes,
       }),
     },
   ),

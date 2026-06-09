@@ -1,19 +1,18 @@
 import { api } from "@/lib/api/client";
-import type { AvailabilityResponse } from "@/types";
+import type { AvailableSlot } from "@/types";
 
 export interface AvailabilityParams {
-  shopId: string;
+  /** Shop slug (GET /shops/:id/availability resolves by slug). */
+  shopSlug: string;
   date: string; // YYYY-MM-DD
-  serviceId?: string;
 }
 
 export const availabilityApi = {
-  /** Router: GET /shops/:id/availability?date=&serviceId= (public). */
-  get: ({ shopId, date, serviceId }: AvailabilityParams) => {
+  /** Returns the list of bookable slots for a date (empty if closed/blocked). */
+  get: ({ shopSlug, date }: AvailabilityParams) => {
     const qs = new URLSearchParams({ date });
-    if (serviceId) qs.set("serviceId", serviceId);
-    return api.get<AvailabilityResponse>(
-      `/shops/${shopId}/availability?${qs.toString()}`,
+    return api.get<AvailableSlot[]>(
+      `/shops/${encodeURIComponent(shopSlug)}/availability?${qs.toString()}`,
       { auth: false },
     );
   },

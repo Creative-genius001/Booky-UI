@@ -5,16 +5,21 @@ import { useRouter } from "next/navigation";
 import { RequireAuth } from "@/components/auth/require-auth";
 import { SidebarNav } from "@/components/dashboard/sidebar";
 import { Topbar } from "@/components/dashboard/topbar";
-import { useShopStore } from "@/stores/shop-store";
+import { VerifyEmailBanner } from "@/components/dashboard/verify-email-banner";
+import { useEnsureShop } from "@/hooks/use-ensure-shop";
+import { FullPageSpinner } from "@/components/ui/spinner";
 
 function DashboardGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const activeShopId = useShopStore((s) => s.activeShopId);
+  const { resolving, hasShop, isEmpty } = useEnsureShop();
 
   useEffect(() => {
-    // No shop yet → send the owner through onboarding.
-    if (activeShopId === null) router.replace("/onboarding/shop");
-  }, [activeShopId, router]);
+    // Owner has no shop yet → send them through onboarding.
+    if (isEmpty) router.replace("/onboarding/shop");
+  }, [isEmpty, router]);
+
+  if (resolving) return <FullPageSpinner label="Loading your shop…" />;
+  if (!hasShop) return <FullPageSpinner />;
 
   return <>{children}</>;
 }
@@ -33,6 +38,7 @@ export default function DashboardLayout({
           </aside>
           <div className="flex min-h-dvh flex-col">
             <Topbar />
+            <VerifyEmailBanner />
             <main className="flex-1 px-4 py-6 sm:px-6 sm:py-8">
               <div className="mx-auto max-w-6xl">{children}</div>
             </main>

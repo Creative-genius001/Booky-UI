@@ -1,5 +1,3 @@
-import type { AuthTokens } from "@/types";
-
 /**
  * Lightweight token store backed by localStorage. Kept separate from the
  * Zustand auth store so the low-level api client can read tokens without a
@@ -7,26 +5,31 @@ import type { AuthTokens } from "@/types";
  */
 const KEY = "bookly.tokens";
 
-let memoryCache: AuthTokens | null = null;
-const listeners = new Set<(t: AuthTokens | null) => void>();
+export interface StoredTokens {
+  access_token: string;
+  refresh_token: string;
+}
 
-function readStorage(): AuthTokens | null {
+let memoryCache: StoredTokens | null = null;
+const listeners = new Set<(t: StoredTokens | null) => void>();
+
+function readStorage(): StoredTokens | null {
   if (typeof window === "undefined") return memoryCache;
   try {
     const raw = window.localStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as AuthTokens) : null;
+    return raw ? (JSON.parse(raw) as StoredTokens) : null;
   } catch {
     return null;
   }
 }
 
 export const tokenStore = {
-  get(): AuthTokens | null {
+  get(): StoredTokens | null {
     if (memoryCache) return memoryCache;
     memoryCache = readStorage();
     return memoryCache;
   },
-  set(tokens: AuthTokens) {
+  set(tokens: StoredTokens) {
     memoryCache = tokens;
     if (typeof window !== "undefined") {
       window.localStorage.setItem(KEY, JSON.stringify(tokens));
@@ -40,7 +43,7 @@ export const tokenStore = {
     }
     listeners.forEach((l) => l(null));
   },
-  subscribe(fn: (t: AuthTokens | null) => void) {
+  subscribe(fn: (t: StoredTokens | null) => void) {
     listeners.add(fn);
     return () => listeners.delete(fn);
   },

@@ -5,15 +5,20 @@ import {
   BarChart3,
   CalendarCheck,
   CalendarX,
-  TrendingUp,
-  UserX,
+  Clock,
   Wallet,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useActiveShop } from "@/hooks/use-active-shop";
 import { useAnalytics } from "@/hooks/use-analytics";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { StatCard } from "@/components/dashboard/stat-card";
-import { RevenueChart } from "@/components/dashboard/revenue-chart";
+
+// The SVG chart is only needed on this page — load it on the client on demand.
+const RevenueChart = dynamic(
+  () => import("@/components/dashboard/revenue-chart").then((m) => m.RevenueChart),
+  { ssr: false, loading: () => <Skeleton className="h-56 w-full" /> },
+);
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -35,7 +40,7 @@ export default function AnalyticsPage() {
     <div>
       <PageHeader
         title="Analytics"
-        description="Track revenue, bookings and how full your shop is."
+        description="Track revenue and bookings for your shop."
         action={
           <div className="inline-flex rounded-lg border border-border bg-card p-1">
             {RANGES.map((r) => (
@@ -64,29 +69,29 @@ export default function AnalyticsPage() {
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <StatCard
               label="Revenue"
-              value={formatKobo(data?.totalRevenueKobo ?? 0)}
+              value={formatKobo(data?.total_revenue_kobo ?? 0)}
               icon={Wallet}
               loading={isLoading}
               accent="primary"
             />
             <StatCard
-              label="Bookings"
-              value={data?.totalBookings ?? 0}
+              label="Confirmed"
+              value={data?.confirmed_bookings ?? 0}
               icon={CalendarCheck}
+              loading={isLoading}
+              accent="success"
+            />
+            <StatCard
+              label="Total bookings"
+              value={data?.total_bookings ?? 0}
+              icon={Clock}
               loading={isLoading}
               accent="accent"
             />
             <StatCard
-              label="Cancellations"
-              value={data?.cancelledBookings ?? 0}
+              label="Cancelled"
+              value={data?.cancelled_bookings ?? 0}
               icon={CalendarX}
-              loading={isLoading}
-              accent="secondary"
-            />
-            <StatCard
-              label="No shows"
-              value={data?.noShowBookings ?? 0}
-              icon={UserX}
               loading={isLoading}
               accent="secondary"
             />
@@ -94,21 +99,17 @@ export default function AnalyticsPage() {
 
           <div className="mt-6 grid gap-6 lg:grid-cols-[1.6fr_1fr]">
             <Card>
-              <CardHeader className="flex-row items-center justify-between space-y-0">
+              <CardHeader>
                 <CardTitle>Revenue</CardTitle>
-                <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
-                  <TrendingUp className="size-4 text-success" />
-                  {Math.round((data?.occupancyRate ?? 0) * 100)}% occupancy
-                </span>
               </CardHeader>
               <CardContent>
                 {isLoading ? (
                   <Skeleton className="h-56 w-full" />
-                ) : data?.revenueSeries?.length ? (
-                  <RevenueChart data={data.revenueSeries} />
+                ) : data?.revenue_series?.length ? (
+                  <RevenueChart data={data.revenue_series} />
                 ) : (
                   <EmptyState
-                    title="No data for this period"
+                    title="No revenue in this period"
                     className="border-0 bg-transparent py-8"
                   />
                 )}
@@ -124,10 +125,10 @@ export default function AnalyticsPage() {
                   Array.from({ length: 4 }).map((_, i) => (
                     <Skeleton key={i} className="h-12 w-full rounded-lg" />
                   ))
-                ) : data?.topServices?.length ? (
-                  data.topServices.map((s, i) => (
+                ) : data?.top_services?.length ? (
+                  data.top_services.map((s, i) => (
                     <div
-                      key={s.serviceId}
+                      key={s.service_id}
                       className="flex items-center gap-3 rounded-lg border border-border p-3"
                     >
                       <span className="flex size-7 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
@@ -136,11 +137,11 @@ export default function AnalyticsPage() {
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">{s.name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {s.bookings} bookings
+                          {s.bookings} booking{s.bookings === 1 ? "" : "s"}
                         </p>
                       </div>
                       <span className="text-sm font-semibold">
-                        {formatKobo(s.revenueKobo)}
+                        {formatKobo(s.revenue_kobo)}
                       </span>
                     </div>
                   ))

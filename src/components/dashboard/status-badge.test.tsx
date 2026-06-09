@@ -10,17 +10,17 @@ describe("BookingStatusBadge", () => {
     const { rerender } = render(<BookingStatusBadge status="confirmed" />);
     expect(screen.getByText("Confirmed")).toBeInTheDocument();
 
-    rerender(<BookingStatusBadge status="no_show" />);
-    expect(screen.getByText("No show")).toBeInTheDocument();
+    rerender(<BookingStatusBadge status="pending_payment" />);
+    expect(screen.getByText("Pending payment")).toBeInTheDocument();
 
-    rerender(<BookingStatusBadge status="cancelled" />);
-    expect(screen.getByText("Cancelled")).toBeInTheDocument();
+    rerender(<BookingStatusBadge status="expired" />);
+    expect(screen.getByText("Expired")).toBeInTheDocument();
   });
 });
 
 describe("PaymentStatusBadge", () => {
   it("maps payment statuses to friendly labels", () => {
-    const { rerender } = render(<PaymentStatusBadge status="paid" />);
+    const { rerender } = render(<PaymentStatusBadge status="success" />);
     expect(screen.getByText("Paid")).toBeInTheDocument();
 
     rerender(<PaymentStatusBadge status="pending" />);

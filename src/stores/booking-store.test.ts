@@ -9,8 +9,7 @@ function reset() {
     service: null,
     date: null,
     startTime: null,
-    customer: { name: "", email: "", phone: "" },
-    notes: "",
+    customer: { name: "", email: "" },
   });
 }
 
@@ -29,10 +28,10 @@ describe("booking-store", () => {
     s().selectDate("2026-06-10");
     expect(s().furthestStep()).toBe("time");
 
-    s().selectTime("09:30");
+    s().selectTime("2026-06-10T09:00:00+01:00");
     expect(s().furthestStep()).toBe("details");
 
-    s().setCustomer({ name: "John", email: "j@x.com", phone: "123456789" });
+    s().setCustomer({ name: "John", email: "j@x.com" });
     expect(s().furthestStep()).toBe("payment");
   });
 
@@ -40,7 +39,7 @@ describe("booking-store", () => {
     const s = () => useBookingStore.getState();
     s().selectService(mockServices[0]);
     s().selectDate("2026-06-10");
-    s().selectTime("09:30");
+    s().selectTime("2026-06-10T09:00:00+01:00");
 
     s().selectService(mockServices[1]);
     expect(s().date).toBeNull();
@@ -50,7 +49,7 @@ describe("booking-store", () => {
   it("selecting a new date clears the chosen time", () => {
     const s = () => useBookingStore.getState();
     s().selectDate("2026-06-10");
-    s().selectTime("09:30");
+    s().selectTime("2026-06-10T09:00:00+01:00");
     s().selectDate("2026-06-11");
     expect(s().startTime).toBeNull();
   });

@@ -3,7 +3,7 @@
 import { Check, Clock, Scissors } from "lucide-react";
 import { useServices } from "@/hooks/use-services";
 import { useBookingStore } from "@/stores/booking-store";
-import { formatKobo, formatDuration, cn } from "@/lib/utils";
+import { formatNaira, formatDuration, cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Alert } from "@/components/ui/alert";
@@ -24,7 +24,6 @@ export function ServiceStep({
 
   function choose(service: Service) {
     selectService(service);
-    // Small delay lets the selection animation register before advancing.
     setTimeout(onNext, 160);
   }
 
@@ -93,12 +92,12 @@ export function ServiceStep({
               )}
               <p className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
                 <Clock className="size-3.5" />
-                {formatDuration(service.durationMinutes)}
+                {formatDuration(service.duration_in_minutes)}
               </p>
             </div>
             <div className="shrink-0 text-right">
               <p className="font-bold text-foreground">
-                {formatKobo(service.priceKobo)}
+                {formatNaira(service.price)}
               </p>
             </div>
           </button>

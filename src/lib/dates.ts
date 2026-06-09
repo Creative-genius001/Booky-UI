@@ -44,4 +44,18 @@ export function bookingWindow(windowDays: number): string[] {
   return Array.from({ length: days }, (_, i) => toISODate(addDays(start, i)));
 }
 
+/**
+ * Extract the shop-local "HH:mm" from an RFC-3339 timestamp without converting
+ * timezones (the backend already encodes the shop's local offset).
+ */
+export function isoClock(iso: string): string {
+  const m = iso.match(/T(\d{2}:\d{2})/);
+  return m ? m[1] : "";
+}
+
+/** "YYYY-MM-DD" extracted from an RFC-3339 timestamp (shop-local). */
+export function isoDatePart(iso: string): string {
+  return iso.slice(0, 10);
+}
+
 export { addDays, format, isSameDay, startOfDay };

@@ -4,22 +4,22 @@ import { CalendarOff, Clock } from "lucide-react";
 import { useAvailability } from "@/hooks/use-availability";
 import { useBookingStore } from "@/stores/booking-store";
 import { formatTimeLabel, cn } from "@/lib/utils";
-import { friendlyDate } from "@/lib/dates";
+import { friendlyDate, isoClock } from "@/lib/dates";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 
 export function TimeStep({
-  shopId,
+  shopSlug,
   onNext,
 }: {
-  shopId: string;
+  shopSlug: string;
   onNext: () => void;
 }) {
-  const { service, date, startTime, selectTime } = useBookingStore();
+  const { date, startTime, selectTime } = useBookingStore();
   const { data, isLoading, isError, refetch, isPlaceholderData } =
-    useAvailability({ shopId, date: date ?? undefined, serviceId: service?.id });
+    useAvailability({ shopSlug, date: date ?? undefined });
 
   if (!date) return null;
 
@@ -43,14 +43,14 @@ export function TimeStep({
     );
   }
 
-  const slots = (data?.slots ?? []).filter((s) => s.available > 0);
+  const slots = data ?? [];
 
   if (slots.length === 0) {
     return (
       <EmptyState
         icon={<CalendarOff />}
         title="No times left on this day"
-        description={`${friendlyDate(date)} is fully booked. Try another date.`}
+        description={`${friendlyDate(date)} has no available slots. Try another date.`}
       />
     );
   }
@@ -71,19 +71,19 @@ export function TimeStep({
         )}
       >
         {slots.map((slot) => {
-          const isSelected = startTime === slot.startTime;
-          const low = slot.available <= 2;
+          const isSelected = startTime === slot.start;
+          const label = formatTimeLabel(isoClock(slot.start));
           return (
             <button
-              key={slot.startTime}
+              key={slot.start}
               type="button"
               onClick={() => {
-                selectTime(slot.startTime);
+                selectTime(slot.start);
                 setTimeout(onNext, 160);
               }}
               aria-pressed={isSelected}
               className={cn(
-                "relative flex flex-col items-center justify-center rounded-lg border py-2.5 text-sm font-semibold transition-all",
+                "flex items-center justify-center rounded-lg border py-2.5 text-sm font-semibold transition-all",
                 "hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 isSelected
                   ? "border-primary bg-primary text-primary-foreground"
@@ -92,13 +92,8 @@ export function TimeStep({
             >
               <span className="inline-flex items-center gap-1">
                 <Clock className="size-3.5 opacity-70" />
-                {formatTimeLabel(slot.startTime)}
+                {label}
               </span>
-              {low && !isSelected && (
-                <span className="mt-0.5 text-[10px] font-medium text-warning-foreground">
-                  {slot.available} left
-                </span>
-              )}
             </button>
           );
         })}

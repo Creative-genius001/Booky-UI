@@ -15,6 +15,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { SidebarNav } from "@/components/dashboard/sidebar";
+import { ShopSwitcher } from "@/components/dashboard/shop-switcher";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function Topbar() {
@@ -22,7 +23,7 @@ export function Topbar() {
   const user = useAuthStore((s) => s.user);
   const [open, setOpen] = useState(false);
 
-  const bookingUrl = shop ? `${config.appUrl}/book/${shop.slug}` : "";
+  const bookingUrl = shop?.slug ? `${config.appUrl}/book/${shop.slug}` : "";
 
   function copyLink() {
     if (!bookingUrl) return;
@@ -46,16 +47,10 @@ export function Topbar() {
       </Sheet>
 
       <div className="min-w-0 flex-1">
-        {isLoading ? (
-          <Skeleton className="h-5 w-40" />
-        ) : shop ? (
-          <div className="flex items-center gap-2">
-            <h1 className="truncate text-sm font-semibold sm:text-base">
-              {shop.name}
-            </h1>
-          </div>
+        {isLoading && !shop ? (
+          <Skeleton className="h-9 w-40 rounded-lg" />
         ) : (
-          <span className="text-sm text-muted-foreground">Your shop</span>
+          <ShopSwitcher />
         )}
       </div>
 
@@ -77,7 +72,7 @@ export function Topbar() {
         </div>
       )}
 
-      <Avatar name={user?.fullName} size="sm" />
+      <Avatar name={user?.email} size="sm" />
     </header>
   );
 }
